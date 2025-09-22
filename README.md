@@ -15,3 +15,8 @@ The goal is to create a "google-maps" type feature where users can input current
 ### Demo Video
 [Watch the demo video](https://youtu.be/LZudv5DxLjM)
 
+Current state:
+Very simple prototype for the feature I am trying to implement. Uses a simple heuristic of finding stops that are close the the starting and ending locations and finding a common route/bus that is closest in common to both locations. 
+
+Future:
+Future plans will include accounting for the time the user takes to get to the starting location, the actual transport time, and the time the user needs to go from ending bus stop to their destination + using Google Map APIs and more of the TransLoc API for more accurate tracking.
