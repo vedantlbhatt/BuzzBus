@@ -54,7 +54,7 @@ def get_stops(api_key, route_id):
     if response.status_code == 200:
         stops = response.json()
         if not stops:
-            print(f"No stops found for route {route_id}.")
+            #(f"No stops found for route {route_id}.")
             return []
         for stop in stops:
             lat = stop.get('Latitude')
