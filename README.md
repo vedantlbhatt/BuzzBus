@@ -11,3 +11,5 @@ Proposed Solution:
 - designing a modern + easy-to-navigate interface
 
 The goal is to create a "google-maps" type feature where users can input current and goal locations and be able to access multiple routes of varying times that meets their needs instead of having to scour the map itself
+
+[![Watch the video](https://raw.githubusercontent.com/vedantlbhatt/BuzzBus/Demo.mov)]
