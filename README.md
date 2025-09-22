@@ -1,4 +1,4 @@
-BuzzBuz: An alternative public transporation tracker for the Georgia Institute of Technology
+BuzzBus: An alternative public transporation tracker for the Georgia Institute of Technology
 
 Current Problems in tracking:
 - clunky + outdated UI
