@@ -13,5 +13,5 @@ Proposed Solution:
 The goal is to create a "google-maps" type feature where users can input current and goal locations and be able to access multiple routes of varying times that meets their needs instead of having to scour the map itself
 
 ### Demo Video
-[Watch the demo video](https://github.com/vedantlbhatt/BuzzBus/blob/main/Demo)
+[Watch the demo video](https://youtu.be/LZudv5DxLjM)
 
