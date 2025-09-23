@@ -106,7 +106,7 @@ if __name__ == "__main__":
                     stop_desc = stop.get('Description')
                     all_stops.append((stop_lat, stop_lng, stop_desc, route_id))
 
-    begin_point = (33.7718, -84.3931) #sample beginning point (Bobby Dodd Stadium)
+    begin_point = (33.77397354313724, -84.39167014943847) #sample beginning point (Bobby Dodd Stadium)
     destination_point = (33.7744, -84.3987)  #sample reference (student center)
     
     begin_sorted_stops = sorted(
