@@ -9,16 +9,16 @@ API_KEY = os.getenv('TRANSLOC_API_KEY')
 BASE_URL = os.getenv('GT_TRANSLOC_BASE_URL')
 
 BUILDINGS = {
-    "Tech Tower": (33.772389, -84.394722),
-    "Georgia Tech Library": (33.7743, -84.3956),
-    "Clough Commons": (33.7747, -84.3963),
-    "Hopkins Hall": (33.7760, -84.3993),
-    "Folk Hall": (33.7726, -84.4032),
-    "Montag Hall": (33.7736, -84.4012),
-    "Student Center": (33.7744, -84.3987),
-    "Campus Rec Center": (33.7735, -84.4036),
-    "D.M. Smith": (33.7728, -84.3950),
-    "Bobby Dodd Stadium": (33.7718, -84.3931),
+    "Tech Tower": (33.7726510852488, -84.3947508475869),
+    "Georgia Tech Library": (33.7747751124862, -84.39575939176652),
+    "Clough Commons": (33.77532604620433, -84.39637188806334),
+    "Hopkins Hall": (33.77850642030214, -84.39069072993782),
+    "Glenn Hall": (33.77397354313724, -84.39167014943847),
+    "North Ave East": (33.769581436909526, -84.39098961634303),
+    "Student Center": (33.77361305511324, -84.39801594997785),
+    "Campus Rec Center": (33.77559002203094, -84.40334559002532),
+    "D.M. Smith": (33.77158232011701, -84.3911280052064),
+    "Bobby Dodd Stadium": (33.772681846343005, -84.39323608111707),
 }
 
 def get_active_routes(api_key):
@@ -102,9 +102,10 @@ if st.button("Find Best Bus Route"):
     )
 
     found = False
+    count = 0
 
-    for lat, lng, desc, route in dest_sorted_stops:
-        for latb, lngb, descb, routeb in begin_sorted_stops:
+    for latb, lngb, descb, routeb in begin_sorted_stops:
+        for lat, lng, desc, route in dest_sorted_stops:
             if route == routeb:
                 dist_dest = haversine_distance(lat, lng, destination_point[0], destination_point[1])
                 dist_begin = haversine_distance(latb, lngb, begin_point[0], begin_point[1])
@@ -115,8 +116,9 @@ if st.button("Find Best Bus Route"):
                 st.write(f"Start Stop: {descb}, Distance to Start Point: {dist_begin:.1f} meters")
                 st.write(f"Destination Stop: {desc}, Distance to Destination Point: {dist_dest:.1f} meters")
                 found = True
+                count+=1
                 break
-        if found:
+        if count == 3:
             break
     if not found:
         st.write("No common bus route found connecting these buildings.")
