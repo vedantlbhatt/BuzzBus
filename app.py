@@ -36,12 +36,12 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     R = 6371000  # meters
     dlat = radians(lat2 - lat1)
     dlon = radians(lon2 - lon1)
-    a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return R * c
 
-
-def get_active_routes(api_key):
+def get_all_routes(api_key):
+    """Get all routes from the system."""
     endpoint = '/GetRoutesForMapWithScheduleWithEncodedLine'
     url = BASE_URL + endpoint
     params = {'APIKey': api_key}
@@ -52,6 +52,41 @@ def get_active_routes(api_key):
         st.error(f"Failed to get routes. Status code: {response.status_code}")
         return None
 
+def get_active_vehicles(api_key, route_id=None):
+    """Get vehicles currently on routes. Returns dict mapping route_id to list of vehicles."""
+    endpoint = '/GetMapVehiclePoints'
+    url = BASE_URL + endpoint
+    params = {'APIKey': api_key}
+    if route_id:
+        params['routeID'] = route_id
+    
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        vehicles = response.json()
+        # Group vehicles by route
+        route_vehicles = {}
+        for vehicle in vehicles:
+            rid = vehicle.get('RouteID')
+            if rid:
+                if rid not in route_vehicles:
+                    route_vehicles[rid] = []
+                route_vehicles[rid].append(vehicle)
+        return route_vehicles
+    else:
+        st.error(f"Failed to get vehicles. Status code: {response.status_code}")
+        return {}
+
+def filter_active_routes(all_routes, api_key):
+    """Filter routes to only those with active vehicles."""
+    active_vehicle_routes = get_active_vehicles(api_key)
+    
+    # Filter routes that have vehicles currently on them
+    active_routes = [
+        route for route in all_routes 
+        if route.get('RouteID') in active_vehicle_routes
+    ]
+    
+    return active_routes
 
 def get_routes(api_key, route_id):
     endpoint = "/GetRoutes"
@@ -63,7 +98,6 @@ def get_routes(api_key, route_id):
     else:
         st.error(f"Failed to get route details. Status code: {response.status_code}")
         return None
-
 
 def get_stops(api_key, route_id):
     endpoint = '/GetStops'
@@ -79,9 +113,21 @@ def get_stops(api_key, route_id):
         st.error(f"Failed to get stops. Status code: {response.status_code}")
         return []
 
-
-# UI Controls
-show_markdown = False
+def get_stop_arrival_times(api_key, route_id=None, route_stop_id=None, times_per_stop=1):
+    endpoint = '/GetStopArrivalTimes'
+    url = BASE_URL + endpoint
+    params = {
+        'APIKey': api_key,
+        'routeIDs': route_id,
+        'routeStopIDs': route_stop_id,
+        'timesPerStop': times_per_stop
+    }
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        st.error(f"Failed to get arrival times. Status code: {response.status_code}")
+        return None
 
 with st.form(key="route_search_form"):
     col1, col2 = st.columns(2)
@@ -89,95 +135,96 @@ with st.form(key="route_search_form"):
         begin_building = st.selectbox("Select Starting Building", list(BUILDINGS.keys()))
     with col2:
         dest_building = st.selectbox("Select Destination Building", list(BUILDINGS.keys()))
-
     search_button = st.form_submit_button(label="Find Best Bus Route")
 
+result_heading_shown = False
+
 if search_button:
+    st.empty()  # clear any prior result heading before new search
+
     begin_point = BUILDINGS[begin_building]
     destination_point = BUILDINGS[dest_building]
-    show_markdown = True
 
-    if show_markdown:
-        st.markdown(f"### Searching routes from **{begin_building}** to **{dest_building}**...")
-
-    all_stops = []
-    routes = get_active_routes(API_KEY)
-    if routes:
-        for route in routes:
-            route_id = route.get('RouteID')
-            stops = get_stops(API_KEY, route_id)
-            if stops:
-                for stop in stops:
-                    stop_lat = stop.get('Latitude')
-                    stop_lng = stop.get('Longitude')
-                    stop_desc = stop.get('Description')
-                    all_stops.append((stop_lat, stop_lng, stop_desc, route_id))
-
-        # Sort stops by proximity to start and destination points
-        begin_sorted_stops = sorted(
-            all_stops,
-            key=lambda stop: haversine_distance(stop[0], stop[1], begin_point[0], begin_point[1])
-        )
-
-        dest_sorted_stops = sorted(
-            all_stops,
-            key=lambda stop: haversine_distance(stop[0], stop[1], destination_point[0], destination_point[1])
-        )
-
-        visited_routes = set()
-        common_routes = []
-        route_stop_info = []
-        count = 0
-        max_len = max(len(begin_sorted_stops), len(dest_sorted_stops), 1)
-
-        for i in range(max_len):
-            if count >= 3:
-                break
-            route_begin = begin_sorted_stops[i][3]
-            route_dest = dest_sorted_stops[i][3]
-            if route_begin == route_dest and route_begin not in common_routes:
-                common_routes.append(route_begin)
-                route_stop_info.append((begin_sorted_stops[i], dest_sorted_stops[i]))
-                count += 1
+    # Show loading message while searching
+    with st.spinner(f"Searching routes from {begin_building} to {dest_building}..."):
+        all_stops = []
+        
+        # Get all routes and filter to only active ones
+        all_routes = get_all_routes(API_KEY)
+        if all_routes:
+            active_routes = filter_active_routes(all_routes, API_KEY)
+            
+            if not active_routes:
+                st.warning("No buses are currently running.")
             else:
-                if (route_begin, 1) in visited_routes and route_begin not in common_routes:
-                    common_routes.append(route_begin)
-                    route_stop_info.append((begin_sorted_stops[i], dest_sorted_stops[i]))
-                    count += 1
-                else:
-                    visited_routes.add((route_begin, 0))
-                if count >= 3:
-                    break
-                if (route_dest, 0) in visited_routes and route_dest not in common_routes:
-                    common_routes.append(route_dest)
-                    route_stop_info.append((begin_sorted_stops[i], dest_sorted_stops[i]))
-                    count += 1
-                else:
-                    visited_routes.add((route_dest, 1))
+                for route in active_routes:
+                    route_id = route.get('RouteID')
+                    stops = get_stops(API_KEY, route_id)
+                    if stops:
+                        for stop in stops:
+                            stop_lat = stop.get('Latitude')
+                            stop_lng = stop.get('Longitude')
+                            stop_desc = stop.get('Description')
+                            all_stops.append((stop_lat, stop_lng, stop_desc, route_id))
 
-        if common_routes:
-            show_markdown = False
-            st.markdown("## Best Common Bus Routes")
-            for idx, route in enumerate(common_routes):
-                data = get_routes(API_KEY, route)
-                if data:
-                    begin_stop = route_stop_info[idx][0]
-                    dest_stop = route_stop_info[idx][1]
+                nearby_start_routes = set(stop[3] for stop in all_stops)
+                nearby_dest_routes = set(stop[3] for stop in all_stops)
 
-                    dist_begin = haversine_distance(begin_stop[0], begin_stop[1], begin_point[0], begin_point[1])
-                    dist_dest = haversine_distance(dest_stop[0], dest_stop[1], destination_point[0], destination_point[1])
+                common_routes = list(nearby_start_routes.intersection(nearby_dest_routes))
 
-                    with st.container():
-                        st.markdown("---")
-                        st.subheader(f"🚍 {data[0].get('Description', 'N/A')} (Route: {route})")
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.markdown(f"**Start Stop:** {begin_stop[2]}")
-                            st.markdown(f"**Distance to Start Point:** {dist_begin:.1f} meters")
-                        with col2:
-                            st.markdown(f"**Destination Stop:** {dest_stop[2]}")
-                            st.markdown(f"**Distance to Destination Point:** {dist_dest:.1f} meters")
-        else:
-            st.warning("No common routes found between the selected buildings.")
+                route_costs = []  # list of tuples (cost_meters, route_id, begin_stop, dest_stop)
+
+                for route_id in common_routes:
+                    route_stops = [stop for stop in all_stops if stop[3] == route_id]
+                    if not route_stops:
+                        continue
+
+                    first_stop = min(
+                        route_stops,
+                        key=lambda stop: haversine_distance(stop[0], stop[1], begin_point[0], begin_point[1])
+                    )
+
+                    last_stop = min(
+                        route_stops,
+                        key=lambda stop: haversine_distance(stop[0], stop[1], destination_point[0], destination_point[1])
+                    )
+
+                    total_cost = (
+                        haversine_distance(first_stop[0], first_stop[1], begin_point[0], begin_point[1]) +
+                        haversine_distance(last_stop[0], last_stop[1], destination_point[0], destination_point[1])
+                    )
+
+                    route_costs.append((total_cost, route_id, first_stop, last_stop))
+
+                # sort by total_cost ascending (best = shortest walking before/after bus)
+                route_costs.sort(key=lambda x: x[0])
+
+                MAX_DISPLAY = 5
+                route_costs = route_costs[:MAX_DISPLAY]
+
+    st.markdown(f"### Searching routes from **{begin_building}** to **{dest_building}**...")
+    result_heading_shown = True
+
+if result_heading_shown:
+    if route_costs:
+        st.markdown("## Best Common Bus Routes (ranked by walking transfer distance)")
+        for total_cost, route_id, begin_stop, dest_stop in route_costs:
+            data = get_routes(API_KEY, route_id)
+            if not data:
+                continue
+
+            dist_begin = haversine_distance(begin_stop[0], begin_stop[1], begin_point[0], begin_point[1])
+            dist_dest = haversine_distance(dest_stop[0], dest_stop[1], destination_point[0], destination_point[1])
+
+            with st.container():
+                st.markdown("---")
+                st.subheader(f"🚍 {data[0].get('Description', 'N/A')} (Route: {route_id})")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown(f"**Start Stop:** {begin_stop[2]}")
+                    st.markdown(f"**Distance to Start Point:** {dist_begin:.1f} meters")
+                with col2:
+                    st.markdown(f"**Destination Stop:** {dest_stop[2]}")
+                    st.markdown(f"**Distance to Destination Point:** {dist_dest:.1f} meters")
     else:
-        st.error("Could not retrieve routes from the API. Please try again later.")
+        st.info("No common bus routes found between selected buildings.")
