@@ -15,7 +15,13 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(
+                "http://localhost:3000",
+                "https://buzzbus.netlify.app",
+                "https://buzzbus.vercel.app",
+                "https://*.netlify.app",
+                "https://*.vercel.app"
+              )
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -40,6 +46,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Configure port for production
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+var url = $"http://0.0.0.0:{port}";
+
 app.UseHttpsRedirection();
 
 app.UseCors("AllowReactApp");
@@ -48,4 +58,4 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+app.Run(url);
