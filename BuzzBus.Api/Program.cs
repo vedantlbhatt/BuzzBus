@@ -55,4 +55,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+// Railway port configuration
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+app.Run($"http://0.0.0.0:{port}");
