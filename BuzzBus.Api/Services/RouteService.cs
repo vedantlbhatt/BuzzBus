@@ -244,5 +244,201 @@ namespace BuzzBus.Api.Services
         {
             return degrees * Math.PI / 180;
         }
+
+        public async Task<List<MapRoute>> GetMapRoutesAsync()
+        {
+            var mapRoutes = await _translocApiService.GetRoutesForMapWithScheduleWithEncodedLineAsync();
+            var result = new List<MapRoute>();
+
+            foreach (var route in mapRoutes)
+            {
+                var routeElement = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(route));
+                
+                var mapRoute = new MapRoute();
+                
+                if (routeElement.TryGetProperty("RouteID", out var routeIdElement))
+                {
+                    mapRoute.RouteId = routeIdElement.ValueKind == JsonValueKind.Number 
+                        ? routeIdElement.GetInt32().ToString() 
+                        : routeIdElement.GetString() ?? "";
+                }
+                
+                if (routeElement.TryGetProperty("Description", out var descElement))
+                {
+                    mapRoute.Description = descElement.GetString() ?? "";
+                }
+                
+                if (routeElement.TryGetProperty("MapLineColor", out var colorElement))
+                {
+                    mapRoute.MapLineColor = colorElement.GetString() ?? "#000000";
+                }
+                
+                if (routeElement.TryGetProperty("MapLatitude", out var latElement))
+                {
+                    mapRoute.MapLatitude = latElement.GetDouble();
+                }
+                
+                if (routeElement.TryGetProperty("MapLongitude", out var lngElement))
+                {
+                    mapRoute.MapLongitude = lngElement.GetDouble();
+                }
+                
+                if (routeElement.TryGetProperty("MapZoom", out var zoomElement))
+                {
+                    mapRoute.MapZoom = zoomElement.GetInt32();
+                }
+                
+                if (routeElement.TryGetProperty("IsVisibleOnMap", out var visibleElement))
+                {
+                    mapRoute.IsVisibleOnMap = visibleElement.GetBoolean();
+                }
+                
+                if (routeElement.TryGetProperty("IsCheckedOnMap", out var checkedElement))
+                {
+                    mapRoute.IsCheckedOnMap = checkedElement.GetBoolean();
+                }
+                
+                if (routeElement.TryGetProperty("HideRouteLine", out var hideElement))
+                {
+                    mapRoute.HideRouteLine = hideElement.GetBoolean();
+                }
+                
+                if (routeElement.TryGetProperty("EncodedPolyline", out var polylineElement))
+                {
+                    mapRoute.EncodedPolyline = polylineElement.GetString() ?? "";
+                }
+
+                // Get stops for this route
+                if (!string.IsNullOrEmpty(mapRoute.RouteId))
+                {
+                    var stops = await _translocApiService.GetStopsAsync(mapRoute.RouteId);
+                    foreach (var stop in stops)
+                    {
+                        var stopElement = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(stop));
+                        var mapStop = new MapStop();
+                        
+                        if (stopElement.TryGetProperty("RouteStopID", out var stopIdElement))
+                        {
+                            mapStop.RouteStopId = stopIdElement.ValueKind == JsonValueKind.Number 
+                                ? stopIdElement.GetInt32().ToString() 
+                                : stopIdElement.GetString() ?? "";
+                        }
+                        
+                        if (stopElement.TryGetProperty("RouteID", out var stopRouteIdElement))
+                        {
+                            mapStop.RouteId = stopRouteIdElement.ValueKind == JsonValueKind.Number 
+                                ? stopRouteIdElement.GetInt32().ToString() 
+                                : stopRouteIdElement.GetString() ?? "";
+                        }
+                        
+                        if (stopElement.TryGetProperty("Description", out var stopDescElement))
+                        {
+                            mapStop.Description = stopDescElement.GetString() ?? "";
+                        }
+                        
+                        if (stopElement.TryGetProperty("Latitude", out var stopLatElement))
+                        {
+                            mapStop.Latitude = stopLatElement.GetDouble();
+                        }
+                        
+                        if (stopElement.TryGetProperty("Longitude", out var stopLngElement))
+                        {
+                            mapStop.Longitude = stopLngElement.GetDouble();
+                        }
+                        
+                        if (stopElement.TryGetProperty("Order", out var orderElement))
+                        {
+                            mapStop.Order = orderElement.GetInt32();
+                        }
+                        
+                        if (stopElement.TryGetProperty("ShowEstimatesOnMap", out var estimatesElement))
+                        {
+                            mapStop.ShowEstimatesOnMap = estimatesElement.GetBoolean();
+                        }
+                        
+                        if (stopElement.TryGetProperty("ShowDefaultedOnMap", out var defaultedElement))
+                        {
+                            mapStop.ShowDefaultedOnMap = defaultedElement.GetBoolean();
+                        }
+                        
+                        mapRoute.Stops.Add(mapStop);
+                    }
+                }
+
+                result.Add(mapRoute);
+            }
+
+            return result;
+        }
+
+        public async Task<List<MapVehicle>> GetMapVehiclesAsync()
+        {
+            var vehicles = await _translocApiService.GetMapVehiclePointsAsync();
+            var result = new List<MapVehicle>();
+
+            foreach (var vehicle in vehicles)
+            {
+                var vehicleElement = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(vehicle));
+                var mapVehicle = new MapVehicle();
+                
+                if (vehicleElement.TryGetProperty("VehicleID", out var vehicleIdElement))
+                {
+                    mapVehicle.VehicleId = vehicleIdElement.ValueKind == JsonValueKind.Number 
+                        ? vehicleIdElement.GetInt32().ToString() 
+                        : vehicleIdElement.GetString() ?? "";
+                }
+                
+                if (vehicleElement.TryGetProperty("RouteID", out var routeIdElement))
+                {
+                    mapVehicle.RouteId = routeIdElement.ValueKind == JsonValueKind.Number 
+                        ? routeIdElement.GetInt32().ToString() 
+                        : routeIdElement.GetString() ?? "";
+                }
+                
+                if (vehicleElement.TryGetProperty("Name", out var nameElement))
+                {
+                    mapVehicle.Name = nameElement.GetString() ?? "";
+                }
+                
+                if (vehicleElement.TryGetProperty("Latitude", out var latElement))
+                {
+                    mapVehicle.Latitude = latElement.GetDouble();
+                }
+                
+                if (vehicleElement.TryGetProperty("Longitude", out var lngElement))
+                {
+                    mapVehicle.Longitude = lngElement.GetDouble();
+                }
+                
+                if (vehicleElement.TryGetProperty("GroundSpeed", out var speedElement))
+                {
+                    mapVehicle.GroundSpeed = speedElement.GetDouble();
+                }
+                
+                if (vehicleElement.TryGetProperty("Heading", out var headingElement))
+                {
+                    mapVehicle.Heading = headingElement.GetDouble();
+                }
+                
+                if (vehicleElement.TryGetProperty("Seconds", out var secondsElement))
+                {
+                    mapVehicle.Seconds = secondsElement.GetInt32();
+                }
+                
+                if (vehicleElement.TryGetProperty("IsOnRoute", out var onRouteElement))
+                {
+                    mapVehicle.IsOnRoute = onRouteElement.GetBoolean();
+                }
+                
+                if (vehicleElement.TryGetProperty("IsDelayed", out var delayedElement))
+                {
+                    mapVehicle.IsDelayed = delayedElement.GetBoolean();
+                }
+                
+                result.Add(mapVehicle);
+            }
+
+            return result;
+        }
     }
 }

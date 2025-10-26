@@ -6,5 +6,7 @@ namespace BuzzBus.Api.Services
     {
         Task<List<Building>> GetBuildingsAsync();
         Task<RouteSearchResponse> FindRoutesAsync(RouteSearchRequest request);
+        Task<List<MapRoute>> GetMapRoutesAsync();
+        Task<List<MapVehicle>> GetMapVehiclesAsync();
     }
 }

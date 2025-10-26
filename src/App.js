@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import PlaceAutocomplete from './components/PlaceAutocomplete';
+import Map from './components/Map';
 import './App.css';
 
 function App() {
+  const [currentView, setCurrentView] = useState('search'); // 'search' or 'map'
   const [buildings, setBuildings] = useState([]);
   const [beginBuilding, setBeginBuilding] = useState('');
   const [destBuilding, setDestBuilding] = useState('');
@@ -109,9 +111,27 @@ function App() {
       <header className="App-header">
         <h1>🚌 Georgia Tech Bus Route Finder</h1>
         <p>Discover the best bus routes between Georgia Tech buildings</p>
+        
+        <div className="navigation-tabs">
+          <button 
+            className={`nav-tab ${currentView === 'search' ? 'active' : ''}`}
+            onClick={() => setCurrentView('search')}
+          >
+            🔍 Route Search
+          </button>
+          <button 
+            className={`nav-tab ${currentView === 'map' ? 'active' : ''}`}
+            onClick={() => setCurrentView('map')}
+          >
+            🗺️ Live Map
+          </button>
+        </div>
       </header>
 
-      <main className="App-main">
+      {currentView === 'map' ? (
+        <Map />
+      ) : (
+        <main className="App-main">
         <form onSubmit={handleSearch} className="search-form">
           {/* Search Mode Toggle */}
           <div className="search-mode-toggle">
@@ -143,7 +163,7 @@ function App() {
                     required
                   >
                     <option value="">Select starting building</option>
-                    {buildings.map(building => (
+                    {buildings && buildings.length > 0 && buildings.map(building => (
                       <option key={building} value={building}>
                         {building}
                       </option>
@@ -160,7 +180,7 @@ function App() {
                     required
                   >
                     <option value="">Select destination building</option>
-                    {buildings.map(building => (
+                    {buildings && buildings.length > 0 && buildings.map(building => (
                       <option key={building} value={building}>
                         {building}
                       </option>
@@ -251,7 +271,8 @@ function App() {
             </div>
           </div>
         )}
-      </main>
+        </main>
+      )}
     </div>
   );
 }

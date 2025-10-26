@@ -9,5 +9,7 @@ namespace BuzzBus.Api.Services
         Task<List<object>> GetStopsAsync(string routeId);
         Task<List<object>> GetRouteDetailsAsync(string routeId);
         Task<Dictionary<string, List<object>>> GetActiveVehiclesAsync();
+        Task<List<object>> GetRoutesForMapWithScheduleWithEncodedLineAsync();
+        Task<List<object>> GetMapVehiclePointsAsync();
     }
 }

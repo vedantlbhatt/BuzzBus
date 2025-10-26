@@ -171,5 +171,57 @@ namespace BuzzBus.Api.Services
                 return new Dictionary<string, List<object>>();
             }
         }
+
+        public async Task<List<object>> GetRoutesForMapWithScheduleWithEncodedLineAsync()
+        {
+            var endpoint = "/GetRoutesForMapWithScheduleWithEncodedLine";
+            var url = $"{_settings.BaseUrl}{endpoint}?APIKey={_settings.ApiKey}";
+            
+            try
+            {
+                var response = await _httpClient.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    return JsonSerializer.Deserialize<List<object>>(content) ?? new List<object>();
+                }
+                else
+                {
+                    Console.WriteLine($"TransLoc API error for map routes: {response.StatusCode} - {response.ReasonPhrase}");
+                    return new List<object>();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"TransLoc API exception for map routes: {ex.Message}");
+                return new List<object>();
+            }
+        }
+
+        public async Task<List<object>> GetMapVehiclePointsAsync()
+        {
+            var endpoint = "/GetMapVehiclePoints";
+            var url = $"{_settings.BaseUrl}{endpoint}?APIKey={_settings.ApiKey}";
+            
+            try
+            {
+                var response = await _httpClient.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    return JsonSerializer.Deserialize<List<object>>(content) ?? new List<object>();
+                }
+                else
+                {
+                    Console.WriteLine($"TransLoc API error for vehicle points: {response.StatusCode} - {response.ReasonPhrase}");
+                    return new List<object>();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"TransLoc API exception for vehicle points: {ex.Message}");
+                return new List<object>();
+            }
+        }
     }
 }

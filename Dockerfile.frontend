@@ -7,21 +7,15 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including dev dependencies for development mode)
+RUN npm install
 
 # Copy source code
 COPY src/ ./src/
 COPY public/ ./public/
 
-# Build the React app
-RUN npm run build
-
-# Install serve to run the production build
-RUN npm install -g serve
-
 # Expose port
 EXPOSE 3000
 
-# Start the application
-CMD ["serve", "-s", "build", "-l", "3000"]
+# Start the application in development mode (this will use the proxy)
+CMD ["npm", "start"]

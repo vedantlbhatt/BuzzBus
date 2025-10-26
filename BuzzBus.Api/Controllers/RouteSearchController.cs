@@ -66,5 +66,33 @@ namespace BuzzBus.Api.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
+        [HttpGet("map-routes")]
+        public async Task<ActionResult> GetMapRoutes()
+        {
+            try
+            {
+                var routes = await _routeService.GetMapRoutesAsync();
+                return Ok(routes);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("map-vehicles")]
+        public async Task<ActionResult> GetMapVehicles()
+        {
+            try
+            {
+                var vehicles = await _routeService.GetMapVehiclesAsync();
+                return Ok(vehicles);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
     }
 }

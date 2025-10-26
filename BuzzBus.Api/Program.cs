@@ -1,6 +1,7 @@
 using BuzzBus.Api.Services;
 using BuzzBus.Api.Controllers;
 using BuzzBus.Api.Models;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
