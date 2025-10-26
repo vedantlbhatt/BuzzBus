@@ -47,10 +47,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Configure port for production
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
-var url = $"http://0.0.0.0:{port}";
-
 app.UseHttpsRedirection();
 
 app.UseCors("AllowReactApp");
@@ -59,4 +55,4 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run(url);
+app.Run();
