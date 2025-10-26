@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Georgia Tech Bus Route Finder</title>
+    <script src="config.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem 1rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .main {
+            flex: 1;
+            padding: 2rem 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .search-form {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .form-group select {
+            padding: 0.75rem 1rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 1rem;
+            background: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-options {
+            margin-bottom: 1.5rem;
+        }
+
+        .option-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 0.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            color: #6c757d;
+        }
+
+        .tab-button.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-mode {
+            display: none;
+        }
+
+        .search-mode.active {
+            display: block;
+        }
+
+        .form-group input {
+            padding: 0.75rem 1rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 1rem;
+            background: white;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .pac-container {
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e1e8ed;
+            margin-top: 0.25rem;
+        }
+
+        .pac-item {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .pac-item:last-child {
+            border-bottom: none;
+        }
+
+        .pac-item:hover {
+            background: #f8f9fa;
+        }
+
+        .pac-matched {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .search-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+            display: block;
+        }
+
+        .search-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .search-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c53030;
+            padding: 1rem;
+            border-radius: 10px;
+            border: 1px solid #feb2b2;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .results-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-section h2 {
+            color: #2c3e50;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .route-info {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .routes-container {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .route-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e1e8ed;
+            transition: all 0.3s ease;
+        }
+
+        .route-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        .route-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f8f9fa;
+        }
+
+        .route-header h3 {
+            color: #2c3e50;
+            font-size: 1.3rem;
+            margin: 0;
+        }
+
+        .route-id {
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .route-details {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .stop-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .stop-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stop-item h4 {
+            color: #2c3e50;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .stop-name {
+            color: #495057;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .stop-distance {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .total-distance {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #667eea;
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .stop-info {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .route-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            
+            .main {
+                padding: 1rem;
+            }
+            
+            .search-form,
+            .results-section {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🚌 Georgia Tech Bus Route Finder</h1>
+            <p>Discover the best bus routes between Georgia Tech buildings</p>
+        </header>
+
+        <main class="main">
+            <form class="search-form" id="searchForm">
+                <div class="search-options">
+                    <div class="option-tabs">
+                        <button type="button" class="tab-button active" onclick="switchSearchMode('buildings')">Campus Buildings</button>
+                        <button type="button" class="tab-button" onclick="switchSearchMode('locations')">Nearby Locations</button>
+                    </div>
+                </div>
+
+                <div id="building-search" class="search-mode active">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="begin-building">Starting Building</label>
+                            <select id="begin-building" required>
+                                <option value="">Select starting building</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dest-building">Destination Building</label>
+                            <select id="dest-building" required>
+                                <option value="">Select destination building</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="location-search" class="search-mode">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="begin-location">Starting Location</label>
+                            <input type="text" id="begin-location" placeholder="Search for a location near Georgia Tech..." autocomplete="off">
+                            <input type="hidden" id="begin-coordinates">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dest-location">Destination Location</label>
+                            <input type="text" id="dest-location" placeholder="Search for a location near Georgia Tech..." autocomplete="off">
+                            <input type="hidden" id="dest-coordinates">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="search-button" id="searchButton">
+                    Find Best Bus Route
+                </button>
+            </form>
+
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+            <div id="loadingMessage" class="loading" style="display: none;">Searching routes...</div>
+            <div id="resultsSection" class="results-section" style="display: none;"></div>
+        </main>
+    </div>
+
+    <script>
+        let buildings = [];
+        let beginAutocomplete, destAutocomplete;
+        let currentSearchMode = 'buildings';
+
+        // Load buildings on page load
+        async function loadBuildings() {
+            try {
+                const response = await fetch('/api/buildings');
+                if (response.ok) {
+                    buildings = await response.json();
+                    populateBuildingSelects();
+                } else {
+                    showError('Failed to load buildings');
+                }
+            } catch (error) {
+                showError('Failed to load buildings');
+                console.error('Error loading buildings:', error);
+            }
+        }
+
+        // Switch between building and location search modes
+        function switchSearchMode(mode) {
+            currentSearchMode = mode;
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Show/hide search modes
+            document.getElementById('building-search').classList.toggle('active', mode === 'buildings');
+            document.getElementById('location-search').classList.toggle('active', mode === 'locations');
+            
+            // Clear form when switching modes
+            document.getElementById('searchForm').reset();
+            document.getElementById('resultsSection').style.display = 'none';
+        }
+
+        // Initialize Google Places autocomplete
+        function initGooglePlaces() {
+            if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+                console.error('Google Maps API not loaded');
+                return;
+            }
+
+            // Georgia Tech coordinates for bias
+            const georgiaTech = new google.maps.LatLng(33.7756, -84.3963);
+            
+            // Create autocomplete for starting location
+            const beginInput = document.getElementById('begin-location');
+            beginAutocomplete = new google.maps.places.Autocomplete(beginInput, {
+                bounds: new google.maps.LatLngBounds(
+                    new google.maps.LatLng(33.7656, -84.4063), // Southwest
+                    new google.maps.LatLng(33.7856, -84.3863)  // Northeast
+                ),
+                componentRestrictions: { country: 'us' },
+                fields: ['place_id', 'geometry', 'name', 'formatted_address']
+            });
+
+            // Create autocomplete for destination location
+            const destInput = document.getElementById('dest-location');
+            destAutocomplete = new google.maps.places.Autocomplete(destInput, {
+                bounds: new google.maps.LatLngBounds(
+                    new google.maps.LatLng(33.7656, -84.4063), // Southwest
+                    new google.maps.LatLng(33.7856, -84.3863)  // Northeast
+                ),
+                componentRestrictions: { country: 'us' },
+                fields: ['place_id', 'geometry', 'name', 'formatted_address']
+            });
+
+            // Handle place selection for starting location
+            beginAutocomplete.addListener('place_changed', function() {
+                const place = beginAutocomplete.getPlace();
+                if (place.geometry) {
+                    const coords = place.geometry.location;
+                    document.getElementById('begin-coordinates').value = 
+                        `${coords.lat()},${coords.lng()}`;
+                }
+            });
+
+            // Handle place selection for destination location
+            destAutocomplete.addListener('place_changed', function() {
+                const place = destAutocomplete.getPlace();
+                if (place.geometry) {
+                    const coords = place.geometry.location;
+                    document.getElementById('dest-coordinates').value = 
+                        `${coords.lat()},${coords.lng()}`;
+                }
+            });
+        }
+
+        function populateBuildingSelects() {
+            const beginSelect = document.getElementById('begin-building');
+            const destSelect = document.getElementById('dest-building');
+            
+            buildings.forEach(building => {
+                const option1 = new Option(building, building);
+                const option2 = new Option(building, building);
+                beginSelect.add(option1);
+                destSelect.add(option2);
+            });
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingMessage').style.display = show ? 'block' : 'none';
+        }
+
+        function showResults(routes, beginBuilding, destBuilding) {
+            const resultsSection = document.getElementById('resultsSection');
+            
+            if (routes.length === 0) {
+                resultsSection.innerHTML = `
+                    <h2>No Routes Found</h2>
+                    <p class="route-info">No common bus routes found between ${beginBuilding} and ${destBuilding}</p>
+                `;
+            } else {
+                let routesHTML = `
+                    <h2>Best Bus Routes</h2>
+                    <p class="route-info">From <strong>${beginBuilding}</strong> to <strong>${destBuilding}</strong></p>
+                    <div class="routes-container">
+                `;
+
+                routes.forEach(route => {
+                    routesHTML += `
+                        <div class="route-card">
+                            <div class="route-header">
+                                <h3>🚍 ${route.route_name}</h3>
+                                <span class="route-id">Route: ${route.route_id}</span>
+                            </div>
+                            
+                            <div class="route-details">
+                                <div class="stop-info">
+                                    <div class="stop-item">
+                                        <h4>Start Stop</h4>
+                                        <p class="stop-name">${route.begin_stop.name}</p>
+                                        <p class="stop-distance">${route.begin_stop.distance}m from ${beginBuilding}</p>
+                                    </div>
+                                    
+                                    <div class="stop-item">
+                                        <h4>Destination Stop</h4>
+                                        <p class="stop-name">${route.dest_stop.name}</p>
+                                        <p class="stop-distance">${route.dest_stop.distance}m from ${destBuilding}</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="total-distance">
+                                    <strong>Total Walking Distance: ${route.total_walking_distance}m</strong>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                routesHTML += '</div>';
+                resultsSection.innerHTML = routesHTML;
+            }
+            
+            resultsSection.style.display = 'block';
+        }
+
+        // Handle form submission
+        document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            let requestData = {};
+            
+            if (currentSearchMode === 'buildings') {
+                const beginBuilding = document.getElementById('begin-building').value;
+                const destBuilding = document.getElementById('dest-building').value;
+                
+                if (!beginBuilding || !destBuilding) {
+                    showError('Please select both starting and destination buildings');
+                    return;
+                }
+                
+                requestData = {
+                    begin_building: beginBuilding,
+                    dest_building: destBuilding
+                };
+            } else {
+                const beginLocation = document.getElementById('begin-location').value;
+                const destLocation = document.getElementById('dest-location').value;
+                const beginCoords = document.getElementById('begin-coordinates').value;
+                const destCoords = document.getElementById('dest-coordinates').value;
+                
+                if (!beginLocation || !destLocation || !beginCoords || !destCoords) {
+                    showError('Please select both starting and destination locations');
+                    return;
+                }
+                
+                requestData = {
+                    begin_location: beginLocation,
+                    dest_location: destLocation,
+                    begin_coordinates: beginCoords,
+                    dest_coordinates: destCoords
+                };
+            }
+
+            showLoading(true);
+            document.getElementById('resultsSection').style.display = 'none';
+
+            try {
+                const response = await fetch('/api/route-search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    const beginName = currentSearchMode === 'buildings' ? 
+                        data.begin_building : data.begin_location;
+                    const destName = currentSearchMode === 'buildings' ? 
+                        data.dest_building : data.dest_location;
+                    showResults(data.routes, beginName, destName);
+                } else {
+                    showError(data.error || 'Failed to search routes');
+                }
+            } catch (error) {
+                showError('Failed to search routes. Please try again.');
+                console.error('Error searching routes:', error);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // Load buildings and initialize Google Places when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBuildings();
+            // Initialize Google Places after a short delay to ensure API is loaded
+            setTimeout(initGooglePlaces, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  buzzbus-api:
+    build:
+      context: ./BuzzBus.Api
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  buzzbus-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+    depends_on:
+      - buzzbus-api
+    restart: unless-stopped
