@@ -19,7 +19,7 @@ function App() {
   useEffect(() => {
     // Fetch available buildings from the API
     const apiUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://YOUR-API-URL.onrender.com/api/buildings'  // Replace with your actual API URL
+      ? 'https://buzzbus-production.up.railway.app/api/buildings'  // Railway API URL
       : '/api/buildings';  // Development proxy
     
     axios.get(apiUrl)
@@ -70,7 +70,7 @@ function App() {
       }
 
       const apiUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://YOUR-API-URL.onrender.com/api/RouteSearch'  // Replace with your actual API URL
+        ? 'https://buzzbus-production.up.railway.app/api/RouteSearch'  // Railway API URL
         : '/api/RouteSearch';  // Development proxy
       
       const response = await axios.post(apiUrl, requestData);
