@@ -58,7 +58,16 @@ namespace BuzzBus.Api.Services
                 var routeElement = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(route));
                 if (routeElement.TryGetProperty("RouteID", out var routeIdElement))
                 {
-                    var routeId = routeIdElement.GetString();
+                    string routeId;
+                    if (routeIdElement.ValueKind == JsonValueKind.Number)
+                    {
+                        routeId = routeIdElement.GetInt32().ToString();
+                    }
+                    else
+                    {
+                        routeId = routeIdElement.GetString() ?? "";
+                    }
+                    
                     if (!string.IsNullOrEmpty(routeId))
                     {
                         var stops = await _translocApiService.GetStopsAsync(routeId);
@@ -79,24 +88,43 @@ namespace BuzzBus.Api.Services
                 }
             }
 
-            var nearbyStartRoutes = allStops.Select(s => s.routeId).ToHashSet();
-            var nearbyDestRoutes = allStops.Select(s => s.routeId).ToHashSet();
-            var commonRoutes = nearbyStartRoutes.Intersect(nearbyDestRoutes).ToList();
+            // Group stops by route
+            var stopsByRoute = allStops.GroupBy(s => s.routeId).ToDictionary(g => g.Key, g => g.ToList());
 
             var routeCosts = new List<(double cost, string routeId, (double lat, double lng, string desc, string routeId) beginStop, (double lat, double lng, string desc, string routeId) destStop)>();
 
-            foreach (var routeId in commonRoutes)
+            foreach (var routeGroup in stopsByRoute)
             {
-                var routeStops = allStops.Where(s => s.routeId == routeId).ToList();
+                var routeId = routeGroup.Key;
+                var routeStops = routeGroup.Value;
                 if (!routeStops.Any()) continue;
 
-                var firstStop = routeStops.MinBy(s => HaversineDistance(s.lat, s.lng, beginLat, beginLng));
-                var lastStop = routeStops.MinBy(s => HaversineDistance(s.lat, s.lng, destLat, destLng));
+                // Find the best start stop (closest to begin point)
+                var bestStartStop = routeStops.MinBy(s => HaversineDistance(s.lat, s.lng, beginLat, beginLng));
+                var startWalkingDistance = HaversineDistance(bestStartStop.lat, bestStartStop.lng, beginLat, beginLng);
 
-                var totalCost = HaversineDistance(firstStop.lat, firstStop.lng, beginLat, beginLng) +
-                               HaversineDistance(lastStop.lat, lastStop.lng, destLat, destLng);
+                // Only consider routes where we don't have to walk too far to get to the bus
+                const double maxStartWalkingDistance = 1000; // 1km max walking to bus
+                if (startWalkingDistance > maxStartWalkingDistance) continue;
 
-                routeCosts.Add((totalCost, routeId, firstStop, lastStop));
+                // Find the best destination stop (closest to destination point)
+                var bestDestStop = routeStops.MinBy(s => HaversineDistance(s.lat, s.lng, destLat, destLng));
+                var destWalkingDistance = HaversineDistance(bestDestStop.lat, bestDestStop.lng, destLat, destLng);
+
+                // Only consider routes where we don't have to walk too far from the bus
+                const double maxDestWalkingDistance = 1000; // 1km max walking from bus
+                if (destWalkingDistance > maxDestWalkingDistance) continue;
+
+                // Calculate total walking distance
+                var totalWalkingDistance = startWalkingDistance + destWalkingDistance;
+
+                // Add penalty if start and dest stops are the same (not useful)
+                if (bestStartStop.desc == bestDestStop.desc)
+                {
+                    totalWalkingDistance += 1000; // Heavy penalty for same stop
+                }
+
+                routeCosts.Add((totalWalkingDistance, routeId, bestStartStop, bestDestStop));
             }
 
             routeCosts.Sort((a, b) => a.cost.CompareTo(b.cost));
@@ -146,12 +174,15 @@ namespace BuzzBus.Api.Services
 
         private (double lat, double lng, string name) GetBeginPoint(RouteSearchRequest request)
         {
+            // Try building first
             if (!string.IsNullOrEmpty(request.BeginBuilding) && _buildings.ContainsKey(request.BeginBuilding))
             {
                 var building = _buildings[request.BeginBuilding];
                 return (building.Latitude, building.Longitude, building.Name);
             }
-            else if (!string.IsNullOrEmpty(request.BeginCoordinates))
+            
+            // Try coordinates
+            if (!string.IsNullOrEmpty(request.BeginCoordinates))
             {
                 var coords = request.BeginCoordinates.Split(',');
                 if (coords.Length == 2 && double.TryParse(coords[0], out var lat) && double.TryParse(coords[1], out var lng))
@@ -159,17 +190,27 @@ namespace BuzzBus.Api.Services
                     return (lat, lng, request.BeginLocation ?? "Starting Location");
                 }
             }
+            
+            // Try location name (fallback to Georgia Tech coordinates)
+            if (!string.IsNullOrEmpty(request.BeginLocation))
+            {
+                return (33.7756, -84.3963, request.BeginLocation);
+            }
+            
             throw new ArgumentException("Invalid begin point");
         }
 
         private (double lat, double lng, string name) GetDestPoint(RouteSearchRequest request)
         {
+            // Try building first
             if (!string.IsNullOrEmpty(request.DestBuilding) && _buildings.ContainsKey(request.DestBuilding))
             {
                 var building = _buildings[request.DestBuilding];
                 return (building.Latitude, building.Longitude, building.Name);
             }
-            else if (!string.IsNullOrEmpty(request.DestCoordinates))
+            
+            // Try coordinates
+            if (!string.IsNullOrEmpty(request.DestCoordinates))
             {
                 var coords = request.DestCoordinates.Split(',');
                 if (coords.Length == 2 && double.TryParse(coords[0], out var lat) && double.TryParse(coords[1], out var lng))
@@ -177,6 +218,13 @@ namespace BuzzBus.Api.Services
                     return (lat, lng, request.DestLocation ?? "Destination Location");
                 }
             }
+            
+            // Try location name (fallback to Georgia Tech coordinates)
+            if (!string.IsNullOrEmpty(request.DestLocation))
+            {
+                return (33.7756, -84.3963, request.DestLocation);
+            }
+            
             throw new ArgumentException("Invalid destination point");
         }
 

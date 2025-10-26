@@ -25,32 +25,33 @@ namespace BuzzBus.Api.Controllers
                     return BadRequest(new { error = "Request body is required" });
                 }
 
-                // Validate building-based search
-                if (!string.IsNullOrEmpty(request.BeginBuilding) && !string.IsNullOrEmpty(request.DestBuilding))
+                // Validate that we have at least one valid begin and destination point
+                bool hasValidBegin = !string.IsNullOrEmpty(request.BeginBuilding) || 
+                                   !string.IsNullOrEmpty(request.BeginCoordinates) || 
+                                   !string.IsNullOrEmpty(request.BeginLocation);
+                bool hasValidDest = !string.IsNullOrEmpty(request.DestBuilding) || 
+                                  !string.IsNullOrEmpty(request.DestCoordinates) || 
+                                  !string.IsNullOrEmpty(request.DestLocation);
+
+                if (!hasValidBegin || !hasValidDest)
+                {
+                    return BadRequest(new { error = "Both begin and destination points must be provided" });
+                }
+
+                // Validate building names if provided
+                if (!string.IsNullOrEmpty(request.BeginBuilding) || !string.IsNullOrEmpty(request.DestBuilding))
                 {
                     var buildings = await _routeService.GetBuildingsAsync();
                     var buildingNames = buildings.Select(b => b.Name).ToHashSet();
                     
-                    if (!buildingNames.Contains(request.BeginBuilding))
+                    if (!string.IsNullOrEmpty(request.BeginBuilding) && !buildingNames.Contains(request.BeginBuilding))
                     {
                         return BadRequest(new { error = "Invalid begin building name" });
                     }
-                    if (!buildingNames.Contains(request.DestBuilding))
+                    if (!string.IsNullOrEmpty(request.DestBuilding) && !buildingNames.Contains(request.DestBuilding))
                     {
                         return BadRequest(new { error = "Invalid destination building name" });
                     }
-                }
-                // Validate location-based search
-                else if (!string.IsNullOrEmpty(request.BeginCoordinates) && !string.IsNullOrEmpty(request.DestCoordinates))
-                {
-                    if (string.IsNullOrEmpty(request.BeginLocation) || string.IsNullOrEmpty(request.DestLocation))
-                    {
-                        return BadRequest(new { error = "Location names are required for coordinate-based search" });
-                    }
-                }
-                else
-                {
-                    return BadRequest(new { error = "Either building names or coordinates must be provided" });
                 }
 
                 var result = await _routeService.FindRoutesAsync(request);

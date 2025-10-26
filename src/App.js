@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import PlaceAutocomplete from './components/PlaceAutocomplete';
 import './App.css';
 
 function App() {
   const [buildings, setBuildings] = useState([]);
   const [beginBuilding, setBeginBuilding] = useState('');
   const [destBuilding, setDestBuilding] = useState('');
+  const [beginPlace, setBeginPlace] = useState({ name: '', coordinates: '' });
+  const [destPlace, setDestPlace] = useState({ name: '', coordinates: '' });
+  const [searchMode, setSearchMode] = useState('buildings'); // 'buildings' or 'places'
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -24,9 +28,18 @@ function App() {
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!beginBuilding || !destBuilding) {
-      setError('Please select both starting and destination buildings');
-      return;
+    
+    // Validate based on search mode
+    if (searchMode === 'buildings') {
+      if (!beginBuilding || !destBuilding) {
+        setError('Please select both starting and destination buildings');
+        return;
+      }
+    } else {
+      if (!beginPlace.name || !destPlace.name) {
+        setError('Please select both starting and destination locations');
+        return;
+      }
     }
 
     setLoading(true);
@@ -34,10 +47,23 @@ function App() {
     setRoutes([]);
 
     try {
-      const response = await axios.post('/api/RouteSearch', {
-        begin_building: beginBuilding,
-        dest_building: destBuilding
-      });
+      let requestData;
+      
+      if (searchMode === 'buildings') {
+        requestData = {
+          begin_building: beginBuilding,
+          dest_building: destBuilding
+        };
+      } else {
+        requestData = {
+          begin_location: beginPlace.name,
+          dest_location: destPlace.name,
+          begin_coordinates: beginPlace.coordinates,
+          dest_coordinates: destPlace.coordinates
+        };
+      }
+
+      const response = await axios.post('/api/RouteSearch', requestData);
 
       if (response.data.routes) {
         setRoutes(response.data.routes);
@@ -52,6 +78,32 @@ function App() {
     }
   };
 
+  const handleBeginPlaceSelect = (placeData) => {
+    setBeginPlace(placeData);
+  };
+
+  const handleDestPlaceSelect = (placeData) => {
+    setDestPlace(placeData);
+  };
+
+  const handleBeginPlaceChange = (e) => {
+    setBeginPlace({ name: e.target.value, coordinates: '' });
+  };
+
+  const handleDestPlaceChange = (e) => {
+    setDestPlace({ name: e.target.value, coordinates: '' });
+  };
+
+  const switchSearchMode = (mode) => {
+    setSearchMode(mode);
+    setBeginBuilding('');
+    setDestBuilding('');
+    setBeginPlace({ name: '', coordinates: '' });
+    setDestPlace({ name: '', coordinates: '' });
+    setRoutes([]);
+    setError('');
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -61,40 +113,88 @@ function App() {
 
       <main className="App-main">
         <form onSubmit={handleSearch} className="search-form">
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="begin-building">Starting Building</label>
-              <select
-                id="begin-building"
-                value={beginBuilding}
-                onChange={(e) => setBeginBuilding(e.target.value)}
-                required
-              >
-                <option value="">Select starting building</option>
-                {buildings.map(building => (
-                  <option key={building} value={building}>
-                    {building}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Search Mode Toggle */}
+          <div className="search-mode-toggle">
+            <button
+              type="button"
+              className={`mode-button ${searchMode === 'buildings' ? 'active' : ''}`}
+              onClick={() => switchSearchMode('buildings')}
+            >
+              🏢 Campus Buildings
+            </button>
+            <button
+              type="button"
+              className={`mode-button ${searchMode === 'places' ? 'active' : ''}`}
+              onClick={() => switchSearchMode('places')}
+            >
+              📍 Any Location
+            </button>
+          </div>
 
-            <div className="form-group">
-              <label htmlFor="dest-building">Destination Building</label>
-              <select
-                id="dest-building"
-                value={destBuilding}
-                onChange={(e) => setDestBuilding(e.target.value)}
-                required
-              >
-                <option value="">Select destination building</option>
-                {buildings.map(building => (
-                  <option key={building} value={building}>
-                    {building}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="form-row">
+            {searchMode === 'buildings' ? (
+              <>
+                <div className="form-group">
+                  <label htmlFor="begin-building">Starting Building</label>
+                  <select
+                    id="begin-building"
+                    value={beginBuilding}
+                    onChange={(e) => setBeginBuilding(e.target.value)}
+                    required
+                  >
+                    <option value="">Select starting building</option>
+                    {buildings.map(building => (
+                      <option key={building} value={building}>
+                        {building}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="dest-building">Destination Building</label>
+                  <select
+                    id="dest-building"
+                    value={destBuilding}
+                    onChange={(e) => setDestBuilding(e.target.value)}
+                    required
+                  >
+                    <option value="">Select destination building</option>
+                    {buildings.map(building => (
+                      <option key={building} value={building}>
+                        {building}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label htmlFor="begin-place">Starting Location</label>
+                  <PlaceAutocomplete
+                    id="begin-place"
+                    placeholder="Search for a location near Georgia Tech..."
+                    value={beginPlace.name}
+                    onChange={handleBeginPlaceChange}
+                    onPlaceSelect={handleBeginPlaceSelect}
+                    className="place-input"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="dest-place">Destination Location</label>
+                  <PlaceAutocomplete
+                    id="dest-place"
+                    placeholder="Search for a location near Georgia Tech..."
+                    value={destPlace.name}
+                    onChange={handleDestPlaceChange}
+                    onPlaceSelect={handleDestPlaceSelect}
+                    className="place-input"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <button type="submit" disabled={loading} className="search-button">
