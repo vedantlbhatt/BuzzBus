@@ -19,9 +19,7 @@ builder.Services.AddCors(options =>
                 "http://localhost:3000",
                 "https://buzz-bus.vercel.app",
                 "https://buzzbus.netlify.app",
-                "https://buzzbus.vercel.app",
-                "https://*.netlify.app",
-                "https://*.vercel.app"
+                "https://buzzbus.vercel.app"
               )
               .AllowAnyHeader()
               .AllowAnyMethod();
