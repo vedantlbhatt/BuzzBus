@@ -20,8 +20,26 @@ namespace BuzzBus.Api.Controllers
         {
             try
             {
-                var buildings = await _routeService.GetBuildingsAsync();
-                return Ok(buildings.Select(b => b.Name).ToList());
+                // Temporarily return hardcoded buildings for testing
+                var hardcodedBuildings = new List<string>
+                {
+                    "Tech Tower",
+                    "Georgia Tech Library", 
+                    "Clough Commons",
+                    "Hopkins Hall",
+                    "Glenn Hall",
+                    "North Ave East",
+                    "Student Center",
+                    "Campus Rec Center",
+                    "D.M. Smith",
+                    "Bobby Dodd Stadium"
+                };
+                
+                return Ok(hardcodedBuildings);
+                
+                // TODO: Uncomment when Transloc API is working
+                // var buildings = await _routeService.GetBuildingsAsync();
+                // return Ok(buildings.Select(b => b.Name).ToList());
             }
             catch (Exception ex)
             {
