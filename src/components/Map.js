@@ -90,12 +90,21 @@ const Map = () => {
         axios.get('/api/RouteSearch/map-vehicles')
       ]);
 
-      // Show all routes regardless of isVisibleOnMap setting
-      setRoutes(routesResponse.data);
-      setVehicles(vehiclesResponse.data);
+      // Only show routes that have active vehicles
+      const allRoutes = routesResponse.data;
+      const activeVehicles = vehiclesResponse.data;
+      
+      // Get route IDs that have active vehicles
+      const activeRouteIds = new Set(activeVehicles.map(vehicle => vehicle.routeId));
+      
+      // Filter routes to only show active ones
+      const activeRoutes = allRoutes.filter(route => activeRouteIds.has(route.routeId));
+      
+      setRoutes(activeRoutes);
+      setVehicles(activeVehicles);
 
-      // Set all routes as visible by default
-      const defaultVisible = new Set(routesResponse.data.map(route => route.routeId));
+      // Set active routes as visible by default
+      const defaultVisible = new Set(activeRoutes.map(route => route.routeId));
       setVisibleRoutes(defaultVisible);
 
     } catch (err) {

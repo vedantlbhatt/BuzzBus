@@ -17,7 +17,7 @@ function App() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Fetch available buildings
+    // Fetch available buildings from the API
     axios.get('/api/buildings')
       .then(response => {
         setBuildings(response.data);

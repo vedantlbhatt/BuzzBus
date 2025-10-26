@@ -364,6 +364,7 @@ body {
   }
 }
 
+/* iPhone specific optimizations */
 @media (max-width: 480px) {
   .App-header {
     padding: 1.5rem 1rem;
@@ -371,11 +372,117 @@ body {
   
   .App-header h1 {
     font-size: 1.8rem;
+    line-height: 1.2;
+  }
+  
+  .App-header p {
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+  
+  .navigation-tabs {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .nav-tab {
+    padding: 1rem;
+    font-size: 1.1rem;
   }
   
   .search-form,
   .results-section {
     padding: 1rem;
+    margin: 0 0.5rem 1rem 0.5rem;
+    border-radius: 15px;
+  }
+  
+  .search-mode-toggle {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .mode-button {
+    padding: 1rem;
+    font-size: 1rem;
+  }
+  
+  .form-group select,
+  .place-input {
+    padding: 1rem;
+    font-size: 16px; /* Prevents zoom on iOS */
+    border-radius: 8px;
+  }
+  
+  .search-button {
+    padding: 1.2rem 2rem;
+    font-size: 1.2rem;
+    border-radius: 8px;
+  }
+  
+  .route-card {
+    padding: 1rem;
+    margin: 0 0.5rem;
+  }
+  
+  .route-header h3 {
+    font-size: 1.1rem;
+  }
+  
+  .stop-item {
+    padding: 0.75rem;
+  }
+  
+  .stop-item h4 {
+    font-size: 0.9rem;
+  }
+  
+  .stop-name {
+    font-size: 0.95rem;
+  }
+  
+  .stop-distance {
+    font-size: 0.85rem;
+  }
+  
+  .total-distance {
+    font-size: 1rem;
+    padding: 0.75rem;
+  }
+}
+
+/* iPhone landscape orientation */
+@media (max-width: 812px) and (orientation: landscape) {
+  .App-header {
+    padding: 1rem;
+  }
+  
+  .App-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .App-header p {
+    font-size: 0.9rem;
+  }
+  
+  .navigation-tabs {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+  
+  .nav-tab {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* iPhone X and newer (notch devices) */
+@media (max-width: 414px) and (max-height: 896px) {
+  .App {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 }
 
@@ -542,6 +649,7 @@ body {
     height: auto;
     border-right: none;
     border-bottom: 1px solid #ddd;
+    padding: 15px;
   }
   
   .map-wrapper {
@@ -550,6 +658,77 @@ body {
   
   .controls-row {
     flex-direction: column;
+    gap: 8px;
+  }
+  
+  .refresh-button, .toggle-all-button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+  }
+  
+  .map-controls h2 {
+    font-size: 20px;
+    margin-bottom: 15px;
+  }
+  
+  .map-controls h3 {
+    font-size: 14px;
+    margin: 15px 0 8px 0;
+  }
+  
+  .route-toggle {
+    padding: 8px 0;
+    font-size: 14px;
+  }
+  
+  .legend-item {
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+}
+
+/* iPhone specific map optimizations */
+@media (max-width: 480px) {
+  .map-controls {
+    padding: 10px;
+  }
+  
+  .map-controls h2 {
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+  
+  .map-wrapper {
+    height: 300px;
+  }
+  
+  .refresh-button, .toggle-all-button {
+    padding: 10px;
+    font-size: 14px;
+  }
+  
+  .route-toggle {
+    padding: 6px 0;
+    font-size: 13px;
+  }
+  
+  .route-color-indicator {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .legend-item {
+    font-size: 12px;
+  }
+  
+  .legend-icon {
+    font-size: 14px;
+  }
+  
+  .legend-dot {
+    width: 10px;
+    height: 10px;
   }
 }
 

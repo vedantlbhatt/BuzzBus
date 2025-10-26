@@ -39,5 +39,5 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://buzzbus-buzzbus-api-1:5000"
+  "proxy": "http://localhost:5001"
 }
