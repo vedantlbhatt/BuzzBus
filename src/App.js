@@ -18,7 +18,11 @@ function App() {
 
   useEffect(() => {
     // Fetch available buildings from the API
-    axios.get('/api/buildings')
+    const apiUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://buzzbus-api.vercel.app/api/buildings'  // Production API URL
+      : '/api/buildings';  // Development proxy
+    
+    axios.get(apiUrl)
       .then(response => {
         setBuildings(response.data);
       })
@@ -65,7 +69,11 @@ function App() {
         };
       }
 
-      const response = await axios.post('/api/RouteSearch', requestData);
+      const apiUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://buzzbus-api.vercel.app/api/RouteSearch'  // Production API URL
+        : '/api/RouteSearch';  // Development proxy
+      
+      const response = await axios.post(apiUrl, requestData);
 
       if (response.data.routes) {
         setRoutes(response.data.routes);
