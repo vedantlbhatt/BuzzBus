@@ -17,6 +17,7 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                 "http://localhost:3000",
+                "https://buzz-bus.vercel.app",
                 "https://buzzbus.netlify.app",
                 "https://buzzbus.vercel.app",
                 "https://*.netlify.app",
