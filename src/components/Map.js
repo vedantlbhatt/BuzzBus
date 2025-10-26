@@ -85,9 +85,15 @@ const Map = () => {
   const loadMapData = async () => {
     try {
       setLoading(true);
+      
+      // Use production API URL when deployed
+      const apiUrl = process.env.NODE_ENV === 'production'
+        ? 'https://buzzbus-production.up.railway.app/api/RouteSearch'
+        : '/api/RouteSearch';
+      
       const [routesResponse, vehiclesResponse] = await Promise.all([
-        axios.get('/api/RouteSearch/map-routes'),
-        axios.get('/api/RouteSearch/map-vehicles')
+        axios.get(`${apiUrl}/map-routes`),
+        axios.get(`${apiUrl}/map-vehicles`)
       ]);
 
       // Only show routes that have active vehicles
