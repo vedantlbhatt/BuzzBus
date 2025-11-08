@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Test - BuzzBus</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Local Test - BuzzBus</h1>
+    
+    <div class="test-box">
+        <h2>Current Environment</h2>
+        <div class="status info">
+            <strong>Hostname:</strong> <span id="hostname"></span><br>
+            <strong>Is Localhost:</strong> <span id="isLocalhost"></span><br>
+            <strong>API URL:</strong> <span id="apiUrl"></span>
+        </div>
+    </div>
+
+    <div class="test-box">
+        <h2>Test API Calls</h2>
+        <button onclick="testBuildings()">Test Buildings API</button>
+        <button onclick="testMapRoutes()">Test Map Routes API</button>
+        <button onclick="testMapVehicles()">Test Map Vehicles API</button>
+        <div id="results"></div>
+    </div>
+
+    <div class="test-box">
+        <h2>What This Means</h2>
+        <div id="explanation"></div>
+    </div>
+
+    <script>
+        // Show current environment
+        const hostname = window.location.hostname;
+        const isLocalhost = hostname === 'localhost';
+        const apiUrl = isLocalhost 
+            ? '/api/buildings'
+            : 'https://buzzbus-production.up.railway.app/api/buildings';
+
+        document.getElementById('hostname').textContent = hostname;
+        document.getElementById('isLocalhost').textContent = isLocalhost ? 'Yes ✓' : 'No ✗';
+        document.getElementById('apiUrl').textContent = apiUrl;
+
+        // Show explanation
+        const explanation = isLocalhost 
+            ? `
+                <div class="status info">
+                    <strong>On Localhost:</strong><br>
+                    • Uses relative URL: <code>/api/buildings</code><br>
+                    • This proxies to: <code>http://localhost:5001/api/buildings</code><br>
+                    • Requires: Backend running on port 5001<br>
+                    • Check package.json: <code>"proxy": "http://localhost:5001"</code>
+                </div>
+            `
+            : `
+                <div class="status success">
+                    <strong>On Production (Vercel):</strong><br>
+                    • Uses absolute URL: <code>https://buzzbus-production.up.railway.app/api/buildings</code><br>
+                    • Directly calls Railway API<br>
+                    • No proxy needed<br>
+                    • Works automatically ✓
+                </div>
+            `;
+        document.getElementById('explanation').innerHTML = explanation;
+
+        // Test functions
+        async function testBuildings() {
+            const url = isLocalhost 
+                ? '/api/buildings'
+                : 'https://buzzbus-production.up.railway.app/api/buildings';
+            
+            testAPI('Buildings', url);
+        }
+
+        async function testMapRoutes() {
+            const url = isLocalhost 
+                ? '/api/RouteSearch/map-routes'
+                : 'https://buzzbus-production.up.railway.app/api/RouteSearch/map-routes';
+            
+            testAPI('Map Routes', url);
+        }
+
+        async function testMapVehicles() {
+            const url = isLocalhost 
+                ? '/api/RouteSearch/map-vehicles'
+                : 'https://buzzbus-production.up.railway.app/api/RouteSearch/map-vehicles';
+            
+            testAPI('Map Vehicles', url);
+        }
+
+        async function testAPI(name, url) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `<div class="status info">Testing ${name} API...</div>`;
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const statusClass = response.ok ? 'success' : 'error';
+                const statusText = response.ok ? '✓ Success' : '✗ Error';
+                
+                resultsDiv.innerHTML = `
+                    <div class="status ${statusClass}">
+                        <strong>${name} API - ${statusText}</strong><br>
+                        Status: ${response.status} ${response.statusText}<br>
+                        URL: <code>${url}</code><br>
+                        Data: <pre>${JSON.stringify(data, null, 2).substring(0, 500)}${JSON.stringify(data).length > 500 ? '...' : ''}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="status error">
+                        <strong>${name} API - ✗ Failed</strong><br>
+                        Error: ${error.message}<br>
+                        URL: <code>${url}</code><br>
+                        ${isLocalhost ? '<br><strong>Note:</strong> Make sure backend is running on port 5001' : ''}
+                    </div>
+                `;
+            }
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            console.log('Hostname:', hostname);
+            console.log('Is Localhost:', isLocalhost);
+            console.log('API URL:', apiUrl);
+        });
+    </script>
+</body>
+</html>
+
