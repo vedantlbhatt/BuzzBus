@@ -18,9 +18,9 @@ function App() {
 
   useEffect(() => {
     // Fetch available buildings from the API
-    const apiUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://buzzbus-production.up.railway.app/api/buildings'  // Railway API URL
-      : '/api/buildings';  // Development proxy
+    const apiUrl = window.location.hostname === 'localhost' 
+      ? '/api/buildings'  // Development proxy
+      : 'https://buzzbus-production.up.railway.app/api/buildings';  // Production API URL
     
     axios.get(apiUrl)
       .then(response => {
@@ -69,9 +69,9 @@ function App() {
         };
       }
 
-      const apiUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://buzzbus-production.up.railway.app/api/RouteSearch'  // Railway API URL
-        : '/api/RouteSearch';  // Development proxy
+      const apiUrl = window.location.hostname === 'localhost' 
+        ? '/api/RouteSearch'  // Development proxy
+        : 'https://buzzbus-production.up.railway.app/api/RouteSearch';  // Production API URL
       
       const response = await axios.post(apiUrl, requestData);
 

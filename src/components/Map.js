@@ -83,13 +83,13 @@ const Map = () => {
   };
 
   const loadMapData = async () => {
+    // Use production API URL when deployed
+    const apiUrl = window.location.hostname === 'localhost'
+      ? '/api/RouteSearch'
+      : 'https://buzzbus-production.up.railway.app/api/RouteSearch';
+    
     try {
       setLoading(true);
-      
-      // Use production API URL when deployed
-      const apiUrl = process.env.NODE_ENV === 'production'
-        ? 'https://buzzbus-production.up.railway.app/api/RouteSearch'
-        : '/api/RouteSearch';
       
       const [routesResponse, vehiclesResponse] = await Promise.all([
         axios.get(`${apiUrl}/map-routes`),
