@@ -1,5 +1,7 @@
 using BuzzBus.Api.Models;
 using System.Text.Json;
+using System.Globalization;
+using System.Linq;
 
 namespace BuzzBus.Api.Services
 {
@@ -141,8 +143,12 @@ namespace BuzzBus.Api.Services
                 var routeElement = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(routeDetails[0]));
                 var routeName = routeElement.TryGetProperty("Description", out var descElement) ? descElement.GetString() ?? "N/A" : "N/A";
 
+                // Recalculate distances for consistency (using actual coordinates)
                 var distBegin = HaversineDistance(beginStop.lat, beginStop.lng, beginLat, beginLng);
                 var distDest = HaversineDistance(destStop.lat, destStop.lng, destLat, destLng);
+                
+                // Use recalculated distances for total (ensures consistency)
+                var totalWalkingDistance = distBegin + distDest;
 
                 results.Add(new RouteResult
                 {
@@ -158,7 +164,7 @@ namespace BuzzBus.Api.Services
                         Name = destStop.desc,
                         Distance = Math.Round(distDest, 1)
                     },
-                    TotalWalkingDistance = Math.Round(totalCost, 1)
+                    TotalWalkingDistance = Math.Round(totalWalkingDistance, 1)
                 });
             }
 
@@ -174,26 +180,89 @@ namespace BuzzBus.Api.Services
 
         private (double lat, double lng, string name) GetBeginPoint(RouteSearchRequest request)
         {
-            // Try building first
+            // Priority 1: If building name is explicitly provided, use building coordinates
             if (!string.IsNullOrEmpty(request.BeginBuilding) && _buildings.ContainsKey(request.BeginBuilding))
             {
                 var building = _buildings[request.BeginBuilding];
                 return (building.Latitude, building.Longitude, building.Name);
             }
             
-            // Try coordinates
+            // Priority 2: If coordinates are provided (from Google Maps dropdown), use them
+            // This ensures exact coordinates from user selection are used
             if (!string.IsNullOrEmpty(request.BeginCoordinates))
             {
                 var coords = request.BeginCoordinates.Split(',');
-                if (coords.Length == 2 && double.TryParse(coords[0], out var lat) && double.TryParse(coords[1], out var lng))
+                if (coords.Length == 2)
                 {
-                    return (lat, lng, request.BeginLocation ?? "Starting Location");
+                    // Trim whitespace and parse with InvariantCulture
+                    var latStr = coords[0].Trim();
+                    var lngStr = coords[1].Trim();
+                    if (double.TryParse(latStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var lat) &&
+                        double.TryParse(lngStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var lng))
+                    {
+                        // Try to match location name to a building name for display
+                        string displayName = request.BeginLocation ?? "Starting Location";
+                        if (!string.IsNullOrEmpty(request.BeginLocation))
+                        {
+                            // Try exact match first
+                            var exactMatch = _buildings.Keys.FirstOrDefault(b => 
+                                string.Equals(b, request.BeginLocation, StringComparison.OrdinalIgnoreCase));
+                            if (exactMatch != null)
+                            {
+                                displayName = exactMatch;
+                            }
+                            else
+                            {
+                                // Try partial match (e.g., "North Avenue East" matches "North Ave East")
+                                var normalizedLocation = request.BeginLocation.ToLowerInvariant()
+                                    .Replace("avenue", "ave")
+                                    .Replace("street", "st")
+                                    .Replace("road", "rd")
+                                    .Replace("boulevard", "blvd");
+                                
+                                var partialMatch = _buildings.Keys.FirstOrDefault(b => 
+                                    normalizedLocation.Contains(b.ToLowerInvariant()) || 
+                                    b.ToLowerInvariant().Contains(normalizedLocation));
+                                if (partialMatch != null)
+                                {
+                                    displayName = partialMatch;
+                                }
+                            }
+                        }
+                        return (lat, lng, displayName);
+                    }
                 }
             }
             
-            // Try location name (fallback to Georgia Tech coordinates)
+            // Priority 3: Try to match location name to a building
             if (!string.IsNullOrEmpty(request.BeginLocation))
             {
+                // Try exact match
+                var exactMatch = _buildings.Keys.FirstOrDefault(b => 
+                    string.Equals(b, request.BeginLocation, StringComparison.OrdinalIgnoreCase));
+                if (exactMatch != null)
+                {
+                    var building = _buildings[exactMatch];
+                    return (building.Latitude, building.Longitude, building.Name);
+                }
+                
+                // Try partial match
+                var normalizedLocation = request.BeginLocation.ToLowerInvariant()
+                    .Replace("avenue", "ave")
+                    .Replace("street", "st")
+                    .Replace("road", "rd")
+                    .Replace("boulevard", "blvd");
+                
+                var partialMatch = _buildings.Keys.FirstOrDefault(b => 
+                    normalizedLocation.Contains(b.ToLowerInvariant()) || 
+                    b.ToLowerInvariant().Contains(normalizedLocation));
+                if (partialMatch != null)
+                {
+                    var building = _buildings[partialMatch];
+                    return (building.Latitude, building.Longitude, building.Name);
+                }
+                
+                // Fallback to Georgia Tech coordinates
                 return (33.7756, -84.3963, request.BeginLocation);
             }
             
@@ -202,26 +271,89 @@ namespace BuzzBus.Api.Services
 
         private (double lat, double lng, string name) GetDestPoint(RouteSearchRequest request)
         {
-            // Try building first
+            // Priority 1: If building name is explicitly provided, use building coordinates
             if (!string.IsNullOrEmpty(request.DestBuilding) && _buildings.ContainsKey(request.DestBuilding))
             {
                 var building = _buildings[request.DestBuilding];
                 return (building.Latitude, building.Longitude, building.Name);
             }
             
-            // Try coordinates
+            // Priority 2: If coordinates are provided (from Google Maps dropdown), use them
+            // This ensures exact coordinates from user selection are used
             if (!string.IsNullOrEmpty(request.DestCoordinates))
             {
                 var coords = request.DestCoordinates.Split(',');
-                if (coords.Length == 2 && double.TryParse(coords[0], out var lat) && double.TryParse(coords[1], out var lng))
+                if (coords.Length == 2)
                 {
-                    return (lat, lng, request.DestLocation ?? "Destination Location");
+                    // Trim whitespace and parse with InvariantCulture
+                    var latStr = coords[0].Trim();
+                    var lngStr = coords[1].Trim();
+                    if (double.TryParse(latStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var lat) &&
+                        double.TryParse(lngStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var lng))
+                    {
+                        // Try to match location name to a building name for display
+                        string displayName = request.DestLocation ?? "Destination Location";
+                        if (!string.IsNullOrEmpty(request.DestLocation))
+                        {
+                            // Try exact match first
+                            var exactMatch = _buildings.Keys.FirstOrDefault(b => 
+                                string.Equals(b, request.DestLocation, StringComparison.OrdinalIgnoreCase));
+                            if (exactMatch != null)
+                            {
+                                displayName = exactMatch;
+                            }
+                            else
+                            {
+                                // Try partial match (e.g., "North Avenue East" matches "North Ave East")
+                                var normalizedLocation = request.DestLocation.ToLowerInvariant()
+                                    .Replace("avenue", "ave")
+                                    .Replace("street", "st")
+                                    .Replace("road", "rd")
+                                    .Replace("boulevard", "blvd");
+                                
+                                var partialMatch = _buildings.Keys.FirstOrDefault(b => 
+                                    normalizedLocation.Contains(b.ToLowerInvariant()) || 
+                                    b.ToLowerInvariant().Contains(normalizedLocation));
+                                if (partialMatch != null)
+                                {
+                                    displayName = partialMatch;
+                                }
+                            }
+                        }
+                        return (lat, lng, displayName);
+                    }
                 }
             }
             
-            // Try location name (fallback to Georgia Tech coordinates)
+            // Priority 3: Try to match location name to a building
             if (!string.IsNullOrEmpty(request.DestLocation))
             {
+                // Try exact match
+                var exactMatch = _buildings.Keys.FirstOrDefault(b => 
+                    string.Equals(b, request.DestLocation, StringComparison.OrdinalIgnoreCase));
+                if (exactMatch != null)
+                {
+                    var building = _buildings[exactMatch];
+                    return (building.Latitude, building.Longitude, building.Name);
+                }
+                
+                // Try partial match
+                var normalizedLocation = request.DestLocation.ToLowerInvariant()
+                    .Replace("avenue", "ave")
+                    .Replace("street", "st")
+                    .Replace("road", "rd")
+                    .Replace("boulevard", "blvd");
+                
+                var partialMatch = _buildings.Keys.FirstOrDefault(b => 
+                    normalizedLocation.Contains(b.ToLowerInvariant()) || 
+                    b.ToLowerInvariant().Contains(normalizedLocation));
+                if (partialMatch != null)
+                {
+                    var building = _buildings[partialMatch];
+                    return (building.Latitude, building.Longitude, building.Name);
+                }
+                
+                // Fallback to Georgia Tech coordinates
                 return (33.7756, -84.3963, request.DestLocation);
             }
             
