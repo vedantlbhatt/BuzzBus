@@ -18,10 +18,14 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "http://localhost:3000",
                 "https://buzz-bus.vercel.app",
-                "https://buzz-baeskpdeg-vedant-bhatts-projects-e46a2fb5.vercel.app",
                 "https://buzzbus.netlify.app",
                 "https://buzzbus.vercel.app"
               )
+              .SetIsOriginAllowed(origin => 
+                  origin != null && (
+                      origin.StartsWith("https://buzz-") && origin.EndsWith(".vercel.app") ||
+                      origin.StartsWith("https://buzzbus-") && origin.EndsWith(".vercel.app")
+                  ))
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
