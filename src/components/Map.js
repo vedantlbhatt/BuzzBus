@@ -114,8 +114,11 @@ const Map = () => {
       setVisibleRoutes(defaultVisible);
 
     } catch (err) {
-      setError('Failed to load map data');
+      setError(`Failed to load map data: ${err.message || 'Unknown error'}`);
       console.error('Error loading map data:', err);
+      console.error('API URL:', apiUrl);
+      console.error('Response:', err.response);
+      console.error('Error details:', err.response?.data);
     } finally {
       setLoading(false);
     }
