@@ -53,11 +53,11 @@ const Map = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routes, visibleRoutes]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (mapInstanceRef.current && vehicles.length > 0) {
       renderVehicles();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vehicles]);
 
   const initializeMap = () => {
