@@ -43,18 +43,21 @@ const Map = () => {
     if (isGoogleMapsLoaded) {
       initializeMap();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGoogleMapsLoaded]);
 
   useEffect(() => {
     if (mapInstanceRef.current && routes.length > 0) {
       renderRoutes();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routes, visibleRoutes]);
 
   useEffect(() => {
     if (mapInstanceRef.current && vehicles.length > 0) {
       renderVehicles();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vehicles]);
 
   const initializeMap = () => {

@@ -32,9 +32,6 @@ const PlaceAutocomplete = ({
   useEffect(() => {
     if (!isLoaded || !inputRef.current) return;
 
-    // Georgia Tech coordinates for bias
-    const georgiaTech = new window.google.maps.LatLng(33.7756, -84.3963);
-    
     // Create autocomplete
     autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
       bounds: new window.google.maps.LatLngBounds(
