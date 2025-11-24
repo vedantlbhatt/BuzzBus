@@ -102,12 +102,17 @@ const Map = () => {
       const allRoutes = routesResponse.data;
       const activeVehicles = vehiclesResponse.data;
       
-      // Show all routes, but highlight ones with active vehicles
-      setRoutes(allRoutes);
+      // Get route IDs that have active vehicles
+      const activeRouteIds = new Set(activeVehicles.map(vehicle => vehicle.routeId).filter(id => id));
+      
+      // Filter routes to only show active ones
+      const activeRoutes = allRoutes.filter(route => route.routeId && activeRouteIds.has(route.routeId));
+      
+      setRoutes(activeRoutes);
       setVehicles(activeVehicles);
 
-      // Set all routes as visible by default
-      const defaultVisible = new Set(allRoutes.map(route => route.routeId).filter(id => id));
+      // Set active routes as visible by default (filter out falsy IDs)
+      const defaultVisible = new Set(activeRoutes.map(route => route.routeId).filter(id => id));
       setVisibleRoutes(defaultVisible);
 
     } catch (err) {
