@@ -185,6 +185,10 @@ class RouteService:
                 if at.vehicle_id and at.vehicle_id in begin_vehicle_ids
             ]
 
+            # The arrival_times are already sorted by seconds (earliest first) in _parse_arrival_times
+            # So begin_arrival_times[0] is the specific vehicle that will take you from begin to dest
+            # This vehicle's vehicle_id and vehicle_name are in the ArrivalTime object
+
             results.append(
                 RouteResult(
                     route_id=route_id,
@@ -193,17 +197,30 @@ class RouteService:
                         name=begin_stop[2],
                         distance=round(dist_begin, 1),
                         route_stop_id=begin_stop[4],
-                        arrival_times=begin_arrival_times
+                        arrival_times=begin_arrival_times  # Contains specific vehicle(s) that go from begin to dest
                     ),
                     dest_stop=StopInfo(
                         name=dest_stop[2],
                         distance=round(dist_dest, 1),
                         route_stop_id=dest_stop[4],
-                        arrival_times=dest_arrival_times
+                        arrival_times=dest_arrival_times  # Contains arrival times for same vehicles at dest
                     ),
                     total_walking_distance=round(total_walking_distance, 1)
                 )
             )
+
+        # Sort results by total_walking_distance to ensure correct order
+        # Routes with vehicles going in correct direction are prioritized
+        # Routes are sorted by: (has_valid_vehicles, total_walking_distance)
+        # This ensures routes with valid vehicles come first, then sorted by distance
+        def sort_key(route):
+            has_vehicles = len(route.begin_stop.arrival_times) > 0
+            # Routes with vehicles get priority (lower sort value)
+            # Routes without vehicles get penalty (higher sort value)
+            priority = 0 if has_vehicles else 1000000
+            return (priority, route.total_walking_distance)
+        
+        results.sort(key=sort_key)
 
         return RouteSearchResponse(
             routes=results,
