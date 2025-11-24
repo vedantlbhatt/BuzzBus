@@ -323,6 +323,39 @@ body {
   font-size: 0.9rem;
 }
 
+.eta-info {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #dee2e6;
+}
+
+.eta-info strong {
+  color: #495057;
+  font-size: 0.9rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.eta-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.eta-list li {
+  color: #28a745;
+  font-weight: 500;
+  font-size: 0.9rem;
+  padding: 0.25rem 0;
+  display: flex;
+  align-items: center;
+}
+
+.eta-list li:before {
+  content: "⏱️";
+  margin-right: 0.5rem;
+}
+
 .total-distance {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;

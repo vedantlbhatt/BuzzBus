@@ -1,24 +1,24 @@
 #!/bin/bash
 
-# Start both React frontend and .NET backend for development
+# Start both React frontend and FastAPI backend for development
 
 echo "Starting BuzzBus development environment..."
 
 # Function to cleanup background processes on exit
 cleanup() {
     echo "Stopping services..."
-    kill $REACT_PID $DOTNET_PID 2>/dev/null
+    kill $REACT_PID $FASTAPI_PID 2>/dev/null
     exit
 }
 
 # Set up cleanup on script exit
 trap cleanup EXIT INT TERM
 
-# Start .NET API in background
-echo "Starting .NET API..."
-cd BuzzBus.Api
-dotnet run &
-DOTNET_PID=$!
+# Start FastAPI backend in background
+echo "Starting FastAPI backend..."
+cd backend
+python -m uvicorn main:app --host 0.0.0.0 --port 5000 --reload &
+FASTAPI_PID=$!
 
 # Wait a moment for the API to start
 sleep 3
@@ -31,7 +31,7 @@ REACT_PID=$!
 
 echo "Both services are starting..."
 echo "React app: http://localhost:3000"
-echo ".NET API: http://localhost:5000"
+echo "FastAPI backend: http://localhost:5000"
 echo ""
 echo "Press Ctrl+C to stop both services"
 

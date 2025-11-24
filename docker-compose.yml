@@ -3,13 +3,13 @@ version: '3.8'
 services:
   buzzbus-api:
     build:
-      context: ./BuzzBus.Api
+      context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "5002:5000"
+      - "5000:5000"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:5000
+      - TRANSLOC_API_KEY=${TRANSLOC_API_KEY}
+      - TRANSLOC_BASE_URL=${TRANSLOC_BASE_URL:-https://gatech.transloc.com/Services/JSONPRelay.svc}
     env_file:
       - .env
     restart: unless-stopped

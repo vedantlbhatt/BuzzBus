@@ -257,16 +257,46 @@ function App() {
                         <h4>Start Stop</h4>
                         <p className="stop-name">{route.beginStop.name}</p>
                         <p className="stop-distance">
-                          {route.beginStop.distance}m from {beginBuilding}
+                          {route.beginStop.distance}m from {beginBuilding || beginPlace.name}
                         </p>
+                        {route.beginStop.arrivalTimes && route.beginStop.arrivalTimes.length > 0 && (
+                          <div className="eta-info">
+                            <strong>Next Bus:</strong>
+                            <ul className="eta-list">
+                              {route.beginStop.arrivalTimes.slice(0, 3).map((eta, idx) => (
+                                <li key={idx}>
+                                  {eta.minutes !== null && eta.minutes !== undefined 
+                                    ? `${eta.minutes} min${eta.minutes !== 1 ? 's' : ''}`
+                                    : 'N/A'}
+                                  {eta.vehicleName && ` (${eta.vehicleName})`}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                       
                       <div className="stop-item">
                         <h4>Destination Stop</h4>
                         <p className="stop-name">{route.destStop.name}</p>
                         <p className="stop-distance">
-                          {route.destStop.distance}m from {destBuilding}
+                          {route.destStop.distance}m from {destBuilding || destPlace.name}
                         </p>
+                        {route.destStop.arrivalTimes && route.destStop.arrivalTimes.length > 0 && (
+                          <div className="eta-info">
+                            <strong>Next Bus:</strong>
+                            <ul className="eta-list">
+                              {route.destStop.arrivalTimes.slice(0, 3).map((eta, idx) => (
+                                <li key={idx}>
+                                  {eta.minutes !== null && eta.minutes !== undefined 
+                                    ? `${eta.minutes} min${eta.minutes !== 1 ? 's' : ''}`
+                                    : 'N/A'}
+                                  {eta.vehicleName && ` (${eta.vehicleName})`}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     </div>
                     
