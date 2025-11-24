@@ -217,6 +217,39 @@ cd backend
 python test_api.py
 ```
 
+## Vehicle Telemetry Logging
+
+Capture live vehicle positions once per minute (defaults to 8 hours of data) and store everything locally—no external database required.
+
+```bash
+cd backend
+python log_vehicle_positions.py  # runs 8 hours @ 60s intervals
+```
+
+Key details:
+- Data is written under `backend/data/vehicle_positions/<timestamp>/`.
+- Each session folder contains:
+  - `vehicle_positions.csv` – timestamped samples for every active vehicle.
+  - `route_metadata.json` – route and stop snapshots for later visualization.
+  - `session.json` – capture parameters (start time, interval, duration).
+- Adjust runtime and cadence as needed:
+  ```bash
+  python log_vehicle_positions.py --duration-minutes 30 --interval-seconds 30
+  ```
+- For quick dry-runs use `--max-iterations 2` to stop after two polls.
+
+### Visualizing the data
+
+Once a capture finishes, load the CSV in a notebook or analysis tool of your choice:
+
+```python
+import pandas as pd
+df = pd.read_csv("backend/data/vehicle_positions/2025-11-24T150000/vehicle_positions.csv", parse_dates=["timestamp"])
+vehicle_12 = df[df["vehicle_id"] == 12]
+```
+
+Use Plotly/Kepler.gl/Deck.gl (or your own map component) to animate each vehicle’s path over time—the stored metadata file includes route lines and stops for richer overlays.
+
 ## Contributing
 
 1. Fork the repository

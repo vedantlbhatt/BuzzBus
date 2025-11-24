@@ -86,3 +86,4 @@ curl -X POST https://buzzbus-production.up.railway.app/api/RouteSearch \
 - In production, Vercel serves static files, so API calls go directly to Railway
 - CORS is properly configured to allow Vercel → Railway requests
 
+
