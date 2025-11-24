@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import PlaceAutocomplete from './components/PlaceAutocomplete';
 import Map from './components/Map';
@@ -6,46 +6,18 @@ import './App.css';
 
 function App() {
   const [currentView, setCurrentView] = useState('search'); // 'search' or 'map'
-  const [buildings, setBuildings] = useState([]);
-  const [beginBuilding, setBeginBuilding] = useState('');
-  const [destBuilding, setDestBuilding] = useState('');
   const [beginPlace, setBeginPlace] = useState({ name: '', coordinates: '' });
   const [destPlace, setDestPlace] = useState({ name: '', coordinates: '' });
-  const [searchMode, setSearchMode] = useState('buildings'); // 'buildings' or 'places'
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    // Fetch available buildings from the API
-    const apiUrl = window.location.hostname === 'localhost' 
-      ? '/api/buildings'  // Development proxy
-      : 'https://buzzbus-production.up.railway.app/api/buildings';  // Production API URL
-    
-    axios.get(apiUrl)
-      .then(response => {
-        setBuildings(response.data);
-      })
-      .catch(err => {
-        setError('Failed to load buildings');
-        console.error('Error fetching buildings:', err);
-      });
-  }, []);
-
   const handleSearch = async (e) => {
     e.preventDefault();
     
-    // Validate based on search mode
-    if (searchMode === 'buildings') {
-      if (!beginBuilding || !destBuilding) {
-        setError('Please select both starting and destination buildings');
-        return;
-      }
-    } else {
-      if (!beginPlace.name || !destPlace.name) {
-        setError('Please select both starting and destination locations');
-        return;
-      }
+    if (!beginPlace.name || !destPlace.name) {
+      setError('Please select both starting and destination locations');
+      return;
     }
 
     setLoading(true);
@@ -53,25 +25,23 @@ function App() {
     setRoutes([]);
 
     try {
-      let requestData;
-      
-      if (searchMode === 'buildings') {
-        requestData = {
-          begin_building: beginBuilding,
-          dest_building: destBuilding
-        };
-      } else {
-        requestData = {
-          begin_location: beginPlace.name,
-          dest_location: destPlace.name,
-          begin_coordinates: beginPlace.coordinates,
-          dest_coordinates: destPlace.coordinates
-        };
-      }
+      const requestData = {
+        begin_location: beginPlace.name,
+        dest_location: destPlace.name,
+        begin_coordinates: beginPlace.coordinates,
+        dest_coordinates: destPlace.coordinates
+      };
 
-      const apiUrl = window.location.hostname === 'localhost' 
-        ? '/api/RouteSearch'  // Development proxy
-        : 'https://buzzbus-production.up.railway.app/api/RouteSearch';  // Production API URL
+      // Determine API URL based on environment
+      const apiUrl = (() => {
+        const hostname = window.location.hostname;
+        // Local development - use proxy
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+          return '/api/RouteSearch';
+        }
+        // Production - use Railway backend
+        return 'https://buzzbus-production.up.railway.app/api/RouteSearch';
+      })();
       
       const response = await axios.post(apiUrl, requestData);
 
@@ -104,130 +74,70 @@ function App() {
     setDestPlace({ name: e.target.value, coordinates: '' });
   };
 
-  const switchSearchMode = (mode) => {
-    setSearchMode(mode);
-    setBeginBuilding('');
-    setDestBuilding('');
-    setBeginPlace({ name: '', coordinates: '' });
-    setDestPlace({ name: '', coordinates: '' });
-    setRoutes([]);
-    setError('');
-  };
-
   return (
     <div className="App">
-      <header className="App-header">
-        <h1>🚌 Georgia Tech Bus Route Finder</h1>
-        <p>Discover the best bus routes between Georgia Tech buildings</p>
-        
-        <div className="navigation-tabs">
-          <button 
-            className={`nav-tab ${currentView === 'search' ? 'active' : ''}`}
+      {/* Header with GT stripe */}
+      <div className="header-container">
+        <div className="header-content">
+          <div className="header-branding">
+            <h1 className="header-title">BUZZ</h1>
+            <span className="header-subtitle">GT TRANSIT</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="nav-container">
+        <div className="nav-content">
+          <button
             onClick={() => setCurrentView('search')}
+            className={`nav-tab ${currentView === 'search' ? 'active' : ''}`}
           >
-            🔍 Route Search
+            ROUTE FINDER
           </button>
-          <button 
-            className={`nav-tab ${currentView === 'map' ? 'active' : ''}`}
+          <button
             onClick={() => setCurrentView('map')}
+            className={`nav-tab ${currentView === 'map' ? 'active' : ''}`}
           >
-            🗺️ Live Map
+            LIVE MAP
           </button>
         </div>
-      </header>
+      </div>
 
       {currentView === 'map' ? (
         <Map />
       ) : (
         <main className="App-main">
         <form onSubmit={handleSearch} className="search-form">
-          {/* Search Mode Toggle */}
-          <div className="search-mode-toggle">
-            <button
-              type="button"
-              className={`mode-button ${searchMode === 'buildings' ? 'active' : ''}`}
-              onClick={() => switchSearchMode('buildings')}
-            >
-              🏢 Campus Buildings
-            </button>
-            <button
-              type="button"
-              className={`mode-button ${searchMode === 'places' ? 'active' : ''}`}
-              onClick={() => switchSearchMode('places')}
-            >
-              📍 Any Location
+          <div className="form-inputs">
+            <div className="input-wrapper from-input">
+              <div className="input-accent"></div>
+              <PlaceAutocomplete
+                id="begin-place"
+                placeholder="FROM"
+                value={beginPlace.name}
+                onChange={handleBeginPlaceChange}
+                onPlaceSelect={handleBeginPlaceSelect}
+                className="route-input"
+              />
+            </div>
+
+            <div className="input-wrapper to-input">
+              <div className="input-accent dark"></div>
+              <PlaceAutocomplete
+                id="dest-place"
+                placeholder="TO"
+                value={destPlace.name}
+                onChange={handleDestPlaceChange}
+                onPlaceSelect={handleDestPlaceSelect}
+                className="route-input"
+              />
+            </div>
+
+            <button type="submit" disabled={loading} className="find-route-button">
+              {loading ? 'SEARCHING...' : 'FIND ROUTE →'}
             </button>
           </div>
-
-          <div className="form-row">
-            {searchMode === 'buildings' ? (
-              <>
-                <div className="form-group">
-                  <label htmlFor="begin-building">Starting Building</label>
-                  <select
-                    id="begin-building"
-                    value={beginBuilding}
-                    onChange={(e) => setBeginBuilding(e.target.value)}
-                    required
-                  >
-                    <option value="">Select starting building</option>
-                    {buildings && buildings.length > 0 && buildings.map(building => (
-                      <option key={building} value={building}>
-                        {building}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="dest-building">Destination Building</label>
-                  <select
-                    id="dest-building"
-                    value={destBuilding}
-                    onChange={(e) => setDestBuilding(e.target.value)}
-                    required
-                  >
-                    <option value="">Select destination building</option>
-                    {buildings && buildings.length > 0 && buildings.map(building => (
-                      <option key={building} value={building}>
-                        {building}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="form-group">
-                  <label htmlFor="begin-place">Starting Location</label>
-                  <PlaceAutocomplete
-                    id="begin-place"
-                    placeholder="Search for a location near Georgia Tech..."
-                    value={beginPlace.name}
-                    onChange={handleBeginPlaceChange}
-                    onPlaceSelect={handleBeginPlaceSelect}
-                    className="place-input"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="dest-place">Destination Location</label>
-                  <PlaceAutocomplete
-                    id="dest-place"
-                    placeholder="Search for a location near Georgia Tech..."
-                    value={destPlace.name}
-                    onChange={handleDestPlaceChange}
-                    onPlaceSelect={handleDestPlaceSelect}
-                    className="place-input"
-                  />
-                </div>
-              </>
-            )}
-          </div>
-
-          <button type="submit" disabled={loading} className="search-button">
-            {loading ? 'Searching...' : 'Find Best Bus Route'}
-          </button>
         </form>
 
         {error && (
@@ -238,74 +148,69 @@ function App() {
 
         {routes.length > 0 && (
           <div className="results-section">
-            <h2>Best Bus Routes</h2>
-            <p className="route-info">
-              From <strong>{beginBuilding}</strong> to <strong>{destBuilding}</strong>
-            </p>
+            <div className="results-header">AVAILABLE ROUTES</div>
             
             <div className="routes-container">
-              {routes.map((route, index) => (
-                <div key={route.routeId} className="route-card">
-                  <div className="route-header">
-                    <h3>🚍 {route.routeName}</h3>
-                    <span className="route-id">Route: {route.routeId}</span>
-                  </div>
-                  
-                  <div className="route-details">
-                    <div className="stop-info">
-                      <div className="stop-item">
-                        <h4>Start Stop</h4>
-                        <p className="stop-name">{route.beginStop.name}</p>
-                        <p className="stop-distance">
-                          {route.beginStop.distance}m from {beginBuilding || beginPlace.name}
-                        </p>
-                        {route.beginStop.arrivalTimes && route.beginStop.arrivalTimes.length > 0 && (
-                          <div className="eta-info">
-                            <strong>Next Bus:</strong>
-                            <ul className="eta-list">
-                              {route.beginStop.arrivalTimes.slice(0, 3).map((eta, idx) => (
-                                <li key={idx}>
-                                  {eta.minutes !== null && eta.minutes !== undefined 
-                                    ? `${eta.minutes} min${eta.minutes !== 1 ? 's' : ''}`
-                                    : 'N/A'}
-                                  {eta.vehicleName && ` (${eta.vehicleName})`}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
+              {routes.map((route, index) => {
+                // Get next arrival time in minutes
+                const nextArrival = route.beginStop.arrivalTimes && route.beginStop.arrivalTimes.length > 0
+                  ? route.beginStop.arrivalTimes[0].minutes
+                  : null;
+                const nextArrivalText = nextArrival !== null && nextArrival !== undefined
+                  ? `${nextArrival}`
+                  : 'N/A';
+                
+                // Count stops (approximate)
+                const stopCount = route.beginStop && route.destStop ? 2 : 0;
+                
+                // Determine route color based on route name
+                const routeNameUpper = (route.routeName || '').toUpperCase();
+                let routeIconBg = '#3b82f6';
+                if (routeNameUpper.includes('RED')) {
+                  routeIconBg = '#dc2626';
+                } else if (routeNameUpper.includes('BLUE')) {
+                  routeIconBg = '#2563eb';
+                } else if (routeNameUpper.includes('TROLLEY') || routeNameUpper.includes('YELLOW')) {
+                  routeIconBg = '#eab308';
+                }
+                
+                // First card is dark, others are white
+                const isFirstCard = index === 0;
+                
+                return (
+                  <div 
+                    key={route.routeId} 
+                    className={`route-card ${isFirstCard ? 'route-card-dark' : 'route-card-light'}`}
+                  >
+                    <div className="route-card-content">
+                      <div className="route-card-left">
+                        <div className={`route-name ${isFirstCard ? 'route-name-dark' : 'route-name-light'}`}>
+                          {route.routeName || `Route ${route.routeId}`}
+                        </div>
+                        <div className={`route-time ${isFirstCard ? 'route-time-dark' : 'route-time-light'}`}>
+                          {nextArrivalText}
+                          <span className="route-time-unit">min</span>
+                        </div>
                       </div>
-                      
-                      <div className="stop-item">
-                        <h4>Destination Stop</h4>
-                        <p className="stop-name">{route.destStop.name}</p>
-                        <p className="stop-distance">
-                          {route.destStop.distance}m from {destBuilding || destPlace.name}
-                        </p>
-                        {route.destStop.arrivalTimes && route.destStop.arrivalTimes.length > 0 && (
-                          <div className="eta-info">
-                            <strong>Next Bus:</strong>
-                            <ul className="eta-list">
-                              {route.destStop.arrivalTimes.slice(0, 3).map((eta, idx) => (
-                                <li key={idx}>
-                                  {eta.minutes !== null && eta.minutes !== undefined 
-                                    ? `${eta.minutes} min${eta.minutes !== 1 ? 's' : ''}`
-                                    : 'N/A'}
-                                  {eta.vehicleName && ` (${eta.vehicleName})`}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
+                      <div 
+                        className="route-icon" 
+                        style={{ 
+                          backgroundColor: routeIconBg,
+                          borderColor: isFirstCard ? '#ffffff' : '#1e293b'
+                        }}
+                      >
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M4 6C4 4.89543 4.89543 4 6 4H18C19.1046 4 20 4.89543 20 6V18C20 19.1046 19.1046 20 18 20H6C4.89543 20 4 19.1046 4 18V6Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M8 8H16M8 12H16M8 16H12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
                       </div>
                     </div>
-                    
-                    <div className="total-distance">
-                      <strong>Total Walking Distance: {route.totalWalkingDistance}m</strong>
+                    <div className={`route-footer ${isFirstCard ? 'route-footer-dark' : 'route-footer-light'}`}>
+                      Next arrival: <span className="route-footer-bold">{nextArrival !== null ? `${nextArrival} min` : 'N/A'}</span> · {stopCount} stops
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

@@ -83,6 +83,17 @@ class MapRoute(BaseModel):
     stops: List[MapStop] = Field(default_factory=list)
 
 
+class VehicleStop(BaseModel):
+    """Stop information for a specific vehicle."""
+    route_stop_id: str = Field(alias="routeStopId")
+    stop_name: str = Field(alias="stopName")
+    latitude: float = 0.0
+    longitude: float = 0.0
+    arrival_seconds: Optional[int] = Field(None, alias="arrivalSeconds")
+    
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class MapVehicle(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     
@@ -96,4 +107,5 @@ class MapVehicle(BaseModel):
     seconds: int = 0
     is_on_route: bool = Field(default=False, alias="isOnRoute")
     is_delayed: bool = Field(default=False, alias="isDelayed")
+    stops: List[VehicleStop] = Field(default_factory=list)  # Stops this vehicle serves
 

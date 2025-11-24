@@ -17,9 +17,28 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configure CORS
+# Configure CORS with origin validation for Vercel preview deployments
+def is_allowed_origin(origin: str) -> bool:
+    """Check if origin is allowed, including Vercel preview deployments."""
+    allowed = settings.cors_origins.copy()
+    
+    # Allow localhost in any form
+    if origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
+        return True
+    
+    # Check exact matches
+    if origin in allowed:
+        return True
+    
+    # Allow Vercel preview deployments (*.vercel.app)
+    if origin.endswith(".vercel.app"):
+        return True
+    
+    return False
+
 app.add_middleware(
     CORSMiddleware,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # Allow all Vercel preview deployments
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],

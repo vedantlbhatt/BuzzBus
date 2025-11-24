@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     # CORS origins
     cors_origins: list = [
         "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
         "https://buzz-bus.vercel.app",
         "https://buzzbus.netlify.app",
         "https://buzzbus.vercel.app",

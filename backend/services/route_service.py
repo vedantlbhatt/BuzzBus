@@ -1,14 +1,14 @@
 import math
 import sys
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import (
     Building, RouteSearchRequest, RouteSearchResponse, RouteResult,
-    StopInfo, ArrivalTime, MapRoute, MapStop, MapVehicle
+    StopInfo, ArrivalTime, MapRoute, MapStop, MapVehicle, VehicleStop
 )
 from services.transloc_api_service import TranslocApiService
 
@@ -347,7 +347,8 @@ class RouteService:
 
     def _extract_route_stop_id(self, stop: dict) -> Optional[str]:
         """Extract route stop ID from stop object."""
-        route_stop_id = stop.get("RouteStopID")
+        # Try both "RouteStopID" and "RouteStopId" (API uses different casing)
+        route_stop_id = stop.get("RouteStopID") or stop.get("RouteStopId")
         if route_stop_id is None:
             return None
         if isinstance(route_stop_id, (int, float)):
@@ -422,13 +423,70 @@ class RouteService:
         return result
 
     async def get_map_vehicles(self) -> List[MapVehicle]:
-        """Get vehicles for map display."""
+        """Get vehicles for map display with their associated stops."""
+        from models import VehicleStop
+        
         vehicles_data = await self.transloc_api_service.get_map_vehicle_points()
         result = []
 
+        # Group vehicles by route to fetch stop data efficiently
+        vehicles_by_route: Dict[str, List[dict]] = {}
         for vehicle in vehicles_data:
+            route_id = self.transloc_api_service._extract_route_id(vehicle)
+            if route_id:
+                if route_id not in vehicles_by_route:
+                    vehicles_by_route[route_id] = []
+                vehicles_by_route[route_id].append(vehicle)
+
+        # For each route, get arrival times to determine which stops each vehicle serves
+        vehicle_stops_map: Dict[int, List[dict]] = {}
+        
+        for route_id, route_vehicles in vehicles_by_route.items():
+            # Get arrival times for all stops on this route
+            arrival_times_data = await self.transloc_api_service.get_stop_arrival_times(
+                route_id, times_per_stop=10
+            )
+            
+            # Get all stops for this route to get coordinates
+            all_stops = await self.transloc_api_service.get_stops(route_id)
+            stops_by_id = {
+                self._extract_route_stop_id(stop): stop 
+                for stop in all_stops 
+                if self._extract_route_stop_id(stop)
+            }
+            
+            # Group stops by vehicle ID
+            for stop_data in arrival_times_data:
+                route_stop_id = self._extract_route_stop_id(stop_data)
+                stop_info = stops_by_id.get(route_stop_id, {})
+                stop_name = stop_data.get("StopDescription", stop_info.get("Description", ""))
+                
+                times = stop_data.get("Times", [])
+                for time in times:
+                    vehicle_id = time.get("VehicleId")
+                    if vehicle_id is not None:
+                        vehicle_id_int = int(vehicle_id) if isinstance(vehicle_id, (int, float, str)) else vehicle_id
+                        if vehicle_id_int not in vehicle_stops_map:
+                            vehicle_stops_map[vehicle_id_int] = []
+                        
+                        vehicle_stops_map[vehicle_id_int].append({
+                            "route_stop_id": str(route_stop_id) if route_stop_id else "",
+                            "stop_name": stop_name,
+                            "latitude": stop_info.get("Latitude", 0.0),
+                            "longitude": stop_info.get("Longitude", 0.0),
+                            "arrival_seconds": time.get("Seconds")
+                        })
+
+        # Build MapVehicle objects with stop information
+        for vehicle in vehicles_data:
+            vehicle_id = vehicle.get("VehicleID")
+            vehicle_id_int = int(vehicle_id) if vehicle_id is not None and isinstance(vehicle_id, (int, float, str)) else None
+            
+            # Get stops for this vehicle
+            vehicle_stops = vehicle_stops_map.get(vehicle_id_int, []) if vehicle_id_int else []
+            
             map_vehicle = MapVehicle(
-                vehicle_id=str(vehicle.get("VehicleID", "")) if vehicle.get("VehicleID") is not None else "",
+                vehicle_id=str(vehicle_id) if vehicle_id is not None else "",
                 route_id=self.transloc_api_service._extract_route_id(vehicle) or "",
                 name=vehicle.get("Name", ""),
                 latitude=vehicle.get("Latitude", 0.0),
@@ -437,7 +495,17 @@ class RouteService:
                 heading=vehicle.get("Heading", 0.0),
                 seconds=vehicle.get("Seconds", 0),
                 is_on_route=vehicle.get("IsOnRoute", False),
-                is_delayed=vehicle.get("IsDelayed", False)
+                is_delayed=vehicle.get("IsDelayed", False),
+                stops=[
+                    VehicleStop(
+                        route_stop_id=stop["route_stop_id"],
+                        stop_name=stop["stop_name"],
+                        latitude=stop["latitude"],
+                        longitude=stop["longitude"],
+                        arrival_seconds=stop.get("arrival_seconds")
+                    )
+                    for stop in vehicle_stops
+                ]
             )
             result.append(map_vehicle)
 

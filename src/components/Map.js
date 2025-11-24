@@ -86,10 +86,16 @@ const Map = () => {
   };
 
   const loadMapData = async () => {
-    // Use production API URL when deployed
-    const apiUrl = window.location.hostname === 'localhost'
-      ? '/api/RouteSearch'
-      : 'https://buzzbus-production.up.railway.app/api/RouteSearch';
+    // Determine API URL based on environment
+    const apiUrl = (() => {
+      const hostname = window.location.hostname;
+      // Local development - use proxy
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return '/api/RouteSearch';
+      }
+      // Production - use Railway backend
+      return 'https://buzzbus-production.up.railway.app/api/RouteSearch';
+    })();
     
     try {
       setLoading(true);
@@ -238,18 +244,6 @@ const Map = () => {
     setVisibleRoutes(newVisibleRoutes);
   };
 
-  const toggleAllRoutes = () => {
-    // Filter out falsy route IDs (empty strings, null, undefined)
-    const validRouteIds = routes.map(route => route.routeId).filter(id => id);
-    const validRoutesCount = validRouteIds.length;
-    
-    if (visibleRoutes.size === validRoutesCount) {
-      setVisibleRoutes(new Set());
-    } else {
-      setVisibleRoutes(new Set(validRouteIds));
-    }
-  };
-
   const refreshData = () => {
     loadMapData();
   };
@@ -262,67 +256,103 @@ const Map = () => {
     );
   }
 
+  // Count vehicles per route
+  const routeVehicleCounts = {};
+  vehicles.forEach(vehicle => {
+    if (vehicle.routeId) {
+      routeVehicleCounts[vehicle.routeId] = (routeVehicleCounts[vehicle.routeId] || 0) + 1;
+    }
+  });
+
+  // Get unique routes with their vehicle counts
+  const activeRoutesData = routes.map(route => ({
+    routeId: route.routeId,
+    description: route.description || route.routeName || `Route ${route.routeId}`,
+    color: route.mapLineColor || '#6366f1',
+    vehicleCount: routeVehicleCounts[route.routeId] || 0
+  }));
+
+  // Determine route color name
+  const getRouteColorName = (description, color) => {
+    const descUpper = (description || '').toUpperCase();
+    if (descUpper.includes('RED')) return 'RED';
+    if (descUpper.includes('BLUE')) return 'BLUE';
+    if (descUpper.includes('TROLLEY') || descUpper.includes('YELLOW')) return 'TROLLEY';
+    return 'ROUTE';
+  };
+
   return (
-    <div className="map-container">
-      <div className="map-controls">
-        <h2>🚌 Georgia Tech Bus Map</h2>
-        <div className="controls-row">
-          <button onClick={refreshData} className="refresh-button">
-            🔄 Refresh Data
-          </button>
-          <button onClick={toggleAllRoutes} className="toggle-all-button">
-            {visibleRoutes.size === routes.filter(route => route.routeId).length ? 'Hide All Routes' : 'Show All Routes'}
-          </button>
-        </div>
-        
-        <div className="route-toggles">
-          <h3>Route Controls</h3>
-          {routes.map(route => (
-            <label key={route.routeId} className="route-toggle">
-              <input
-                type="checkbox"
-                checked={visibleRoutes.has(route.routeId)}
-                onChange={() => toggleRoute(route.routeId)}
-              />
-              <span 
-                className="route-color-indicator" 
-                style={{ backgroundColor: route.mapLineColor }}
-              ></span>
-              {route.description}
-            </label>
-          ))}
+    <div className="map-view-container">
+      <div className="map-view-content">
+        {/* Map Container */}
+        <div className="map-display-container">
+          {loading && (
+            <div className="map-loading-overlay">
+              <p>Loading map data...</p>
+            </div>
+          )}
+          {error && (
+            <div className="map-error">
+              <p>{error}</p>
+              <button onClick={refreshData}>Retry</button>
+            </div>
+          )}
+          <div ref={mapRef} className="map-display" />
+          {!mapInstanceRef.current && (
+            <div className="map-placeholder">
+              <div className="map-placeholder-content">
+                <div className="map-placeholder-title">CAMPUS MAP</div>
+                <div className="map-placeholder-subtitle">Real-time vehicle tracking</div>
+              </div>
+              {/* Decorative grid */}
+              <div className="map-grid-overlay"></div>
+            </div>
+          )}
         </div>
 
-        <div className="map-legend">
-          <h3>Legend</h3>
-          <div className="legend-item">
-            <span className="legend-icon">🚌</span>
-            <span>Active Bus (On Time)</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-icon" style={{ color: '#ff0000' }}>🚌</span>
-            <span>Active Bus (Delayed)</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-dot"></span>
-            <span>Bus Stop</span>
+        {/* Active Routes Section */}
+        <div className="active-routes-section">
+          <div className="active-routes-header">ACTIVE ROUTES</div>
+          <div className="active-routes-grid">
+            {activeRoutesData.map((routeData, index) => {
+              const routeColorName = getRouteColorName(routeData.description, routeData.color);
+              const isFirstCard = index === 0;
+              const routeColor = routeData.color || '#6366f1';
+              
+              // Determine if route color is red, blue, or other
+              const isRed = routeColorName === 'RED';
+              const isBlue = routeColorName === 'BLUE';
+              const isTrolley = routeColorName === 'TROLLEY';
+              
+              return (
+                <div
+                  key={routeData.routeId}
+                  className={`active-route-card ${isFirstCard ? 'active-route-card-dark' : 'active-route-card-light'}`}
+                  onClick={() => toggleRoute(routeData.routeId)}
+                >
+                  <div className="active-route-header">
+                    <div
+                      className="active-route-indicator"
+                      style={{
+                        backgroundColor: isRed ? '#dc2626' : isBlue ? '#2563eb' : isTrolley ? '#eab308' : routeColor,
+                        borderColor: isFirstCard ? '#ffffff' : '#1e293b'
+                      }}
+                    ></div>
+                    <div className={`active-route-name ${isFirstCard ? 'active-route-name-dark' : 'active-route-name-light'}`}>
+                      {routeColorName}
+                    </div>
+                  </div>
+                  <div className={`active-route-count ${isFirstCard ? 'active-route-count-dark' : 'active-route-count-light'}`}>
+                    {routeData.vehicleCount}
+                  </div>
+                  <div className={`active-route-status ${isFirstCard ? 'active-route-status-dark' : 'active-route-status-light'}`}>
+                    BUSES RUNNING
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </div>
-
-      <div className="map-wrapper">
-        {loading && (
-          <div className="map-loading-overlay">
-            <p>Loading map data...</p>
-          </div>
-        )}
-        {error && (
-          <div className="map-error">
-            <p>{error}</p>
-            <button onClick={refreshData}>Retry</button>
-          </div>
-        )}
-        <div ref={mapRef} className="map" />
       </div>
     </div>
   );
