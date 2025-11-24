@@ -87,3 +87,4 @@ curl -X POST https://buzzbus-production.up.railway.app/api/RouteSearch \
 - CORS is properly configured to allow Vercel → Railway requests
 
 
+
