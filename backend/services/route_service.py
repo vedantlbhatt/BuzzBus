@@ -170,6 +170,12 @@ class RouteService:
 
             # Parse arrival times for dest stop
             dest_arrival_times = self._parse_arrival_times(dest_eta_data, dest_stop[4])
+            
+            # Filter arrival times to only show vehicles going in the correct direction
+            # Use arrival time comparison: vehicle must arrive at dest AFTER begin stop
+            begin_arrival_times = self._filter_arrival_times_by_direction(
+                begin_arrival_times, dest_arrival_times
+            )
 
             results.append(
                 RouteResult(
@@ -344,6 +350,49 @@ class RouteService:
         a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         return R * c
+
+    def _filter_arrival_times_by_direction(
+        self,
+        begin_arrival_times: List[ArrivalTime],
+        dest_arrival_times: List[ArrivalTime]
+    ) -> List[ArrivalTime]:
+        """Filter arrival times to only include vehicles that reach destination after begin stop.
+        
+        For loop routes, this ensures we only show buses going in the correct direction.
+        Uses arrival time comparison: if vehicle arrives at dest AFTER begin, include it.
+        """
+        if not begin_arrival_times or not dest_arrival_times:
+            return begin_arrival_times
+        
+        # Create a map of vehicle_id -> arrival_seconds at destination stop
+        dest_times_by_vehicle = {}
+        for dest_time in dest_arrival_times:
+            vehicle_id = dest_time.vehicle_id
+            if vehicle_id and dest_time.seconds is not None:
+                dest_times_by_vehicle[vehicle_id] = dest_time.seconds
+        
+        filtered_times = []
+        for begin_time in begin_arrival_times:
+            vehicle_id = begin_time.vehicle_id
+            begin_seconds = begin_time.seconds
+            
+            # If no vehicle ID or no begin arrival time, can't filter - include it
+            if not vehicle_id or begin_seconds is None:
+                filtered_times.append(begin_time)
+                continue
+            
+            # Check if this vehicle also has an arrival time at destination
+            dest_seconds = dest_times_by_vehicle.get(vehicle_id)
+            
+            # If vehicle doesn't reach destination, exclude it
+            if dest_seconds is None:
+                continue
+            
+            # Include only if destination arrival time is AFTER begin arrival time
+            if dest_seconds > begin_seconds:
+                filtered_times.append(begin_time)
+        
+        return filtered_times
 
     def _extract_route_stop_id(self, stop: dict) -> Optional[str]:
         """Extract route stop ID from stop object."""
