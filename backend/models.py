@@ -55,6 +55,8 @@ class RouteSearchResponse(BaseModel):
 
 
 class MapStop(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    
     route_stop_id: str = Field(default="", alias="routeStopId")
     route_id: str = Field(default="", alias="routeId")
     description: str = Field(default="")
@@ -66,6 +68,8 @@ class MapStop(BaseModel):
 
 
 class MapRoute(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    
     route_id: str = Field(default="", alias="routeId")
     description: str = Field(default="")
     map_line_color: str = Field(default="#000000", alias="mapLineColor")
@@ -80,6 +84,8 @@ class MapRoute(BaseModel):
 
 
 class MapVehicle(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    
     vehicle_id: str = Field(default="", alias="vehicleId")
     route_id: str = Field(default="", alias="routeId")
     name: str = Field(default="")

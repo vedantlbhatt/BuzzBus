@@ -99,21 +99,15 @@ const Map = () => {
         axios.get(`${apiUrl}/map-vehicles`)
       ]);
 
-      // Only show routes that have active vehicles
       const allRoutes = routesResponse.data;
       const activeVehicles = vehiclesResponse.data;
       
-      // Get route IDs that have active vehicles
-      const activeRouteIds = new Set(activeVehicles.map(vehicle => vehicle.routeId));
-      
-      // Filter routes to only show active ones
-      const activeRoutes = allRoutes.filter(route => activeRouteIds.has(route.routeId));
-      
-      setRoutes(activeRoutes);
+      // Show all routes, but highlight ones with active vehicles
+      setRoutes(allRoutes);
       setVehicles(activeVehicles);
 
-      // Set active routes as visible by default
-      const defaultVisible = new Set(activeRoutes.map(route => route.routeId));
+      // Set all routes as visible by default
+      const defaultVisible = new Set(allRoutes.map(route => route.routeId).filter(id => id));
       setVisibleRoutes(defaultVisible);
 
     } catch (err) {
@@ -240,10 +234,14 @@ const Map = () => {
   };
 
   const toggleAllRoutes = () => {
-    if (visibleRoutes.size === routes.length) {
+    // Filter out falsy route IDs (empty strings, null, undefined)
+    const validRouteIds = routes.map(route => route.routeId).filter(id => id);
+    const validRoutesCount = validRouteIds.length;
+    
+    if (visibleRoutes.size === validRoutesCount) {
       setVisibleRoutes(new Set());
     } else {
-      setVisibleRoutes(new Set(routes.map(route => route.routeId)));
+      setVisibleRoutes(new Set(validRouteIds));
     }
   };
 
@@ -268,7 +266,7 @@ const Map = () => {
             🔄 Refresh Data
           </button>
           <button onClick={toggleAllRoutes} className="toggle-all-button">
-            {visibleRoutes.size === routes.length ? 'Hide All Routes' : 'Show All Routes'}
+            {visibleRoutes.size === routes.filter(route => route.routeId).length ? 'Hide All Routes' : 'Show All Routes'}
           </button>
         </div>
         
