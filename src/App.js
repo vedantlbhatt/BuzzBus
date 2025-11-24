@@ -152,13 +152,44 @@ function App() {
             
             <div className="routes-container">
               {routes.map((route, index) => {
-                // Get next arrival time in minutes
-                const nextArrival = route.beginStop.arrivalTimes && route.beginStop.arrivalTimes.length > 0
-                  ? route.beginStop.arrivalTimes[0].minutes
+                // Get next arrival time - prefer seconds, fallback to minutes
+                const firstArrival = route.beginStop?.arrivalTimes && route.beginStop.arrivalTimes.length > 0
+                  ? route.beginStop.arrivalTimes[0]
                   : null;
-                const nextArrivalText = nextArrival !== null && nextArrival !== undefined
-                  ? `${nextArrival}`
+                
+                let nextArrivalMinutes = null;
+                let isArriving = false;
+                let onTimeStatus = null;
+                let arrivalTimeStr = null;
+                
+                if (firstArrival) {
+                  // Calculate minutes from seconds if available (more accurate)
+                  if (firstArrival.seconds !== null && firstArrival.seconds !== undefined) {
+                    nextArrivalMinutes = Math.max(0, Math.floor(firstArrival.seconds / 60));
+                  } else if (firstArrival.minutes !== null && firstArrival.minutes !== undefined) {
+                    nextArrivalMinutes = firstArrival.minutes;
+                  }
+                  
+                  isArriving = firstArrival.isArriving || false;
+                  onTimeStatus = firstArrival.onTimeStatus;
+                  arrivalTimeStr = firstArrival.time || firstArrival.estimateTime || firstArrival.scheduledTime;
+                }
+                
+                const nextArrivalText = nextArrivalMinutes !== null && nextArrivalMinutes !== undefined
+                  ? `${nextArrivalMinutes}`
                   : 'N/A';
+                
+                // Get status text
+                let statusText = '';
+                if (isArriving) {
+                  statusText = 'Arriving';
+                } else if (onTimeStatus === 0) {
+                  statusText = 'On time';
+                } else if (onTimeStatus === 2) {
+                  statusText = 'Early';
+                } else if (onTimeStatus === 3) {
+                  statusText = 'Late';
+                }
                 
                 // Count stops (approximate)
                 const stopCount = route.beginStop && route.destStop ? 2 : 0;
@@ -191,6 +222,11 @@ function App() {
                           {nextArrivalText}
                           <span className="route-time-unit">min</span>
                         </div>
+                        {statusText && (
+                          <div className={`route-status ${isFirstCard ? 'route-status-dark' : 'route-status-light'}`}>
+                            {statusText}
+                          </div>
+                        )}
                       </div>
                       <div 
                         className="route-icon" 
@@ -206,7 +242,12 @@ function App() {
                       </div>
                     </div>
                     <div className={`route-footer ${isFirstCard ? 'route-footer-dark' : 'route-footer-light'}`}>
-                      Next arrival: <span className="route-footer-bold">{nextArrival !== null ? `${nextArrival} min` : 'N/A'}</span> · {stopCount} stops
+                      Next arrival: <span className="route-footer-bold">
+                        {nextArrivalMinutes !== null ? `${nextArrivalMinutes} min` : 'N/A'}
+                        {arrivalTimeStr && ` (${arrivalTimeStr})`}
+                      </span>
+                      {statusText && ` · ${statusText}`}
+                      {route.beginStop?.name && ` · ${route.beginStop.name}`}
                     </div>
                   </div>
                 );

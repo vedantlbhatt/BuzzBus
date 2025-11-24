@@ -12,6 +12,12 @@ class ArrivalTime(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     
     minutes: Optional[int] = None
+    seconds: Optional[int] = None
+    time: Optional[str] = None  # Time of day (e.g., "10:30 AM")
+    estimate_time: Optional[str] = Field(None, alias="estimateTime")  # Estimated arrival time
+    scheduled_time: Optional[str] = Field(None, alias="scheduledTime")  # Scheduled arrival time
+    is_arriving: Optional[bool] = Field(None, alias="isArriving")
+    on_time_status: Optional[int] = Field(None, alias="onTimeStatus")  # 0=on time, 2=early, 3=late
     vehicle_id: Optional[str] = Field(None, alias="vehicleId")
     vehicle_name: Optional[str] = Field(None, alias="vehicleName")
 

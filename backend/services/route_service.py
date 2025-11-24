@@ -141,11 +141,11 @@ class RouteService:
             route_details_task = self.transloc_api_service.get_route_details(route_id)
             begin_eta_task = (
                 self.transloc_api_service.get_stop_arrival_times(route_id, begin_stop[4], 3)
-                if begin_stop[4] else asyncio.create_task(empty_list())
+                if begin_stop[4] else empty_list()
             )
             dest_eta_task = (
                 self.transloc_api_service.get_stop_arrival_times(route_id, dest_stop[4], 3)
-                if dest_stop[4] else asyncio.create_task(empty_list())
+                if dest_stop[4] else empty_list()
             )
             route_detail_tasks.append((route_id, begin_stop, dest_stop, route_details_task, begin_eta_task, dest_eta_task))
 
@@ -358,27 +358,79 @@ class RouteService:
         return None
 
     def _parse_arrival_times(self, eta_data: List[dict], route_stop_id: Optional[str]) -> List[ArrivalTime]:
-        """Parse arrival times from API response."""
+        """Parse arrival times from GetStopArrivalTimes API response.
+        
+        The API returns RouteStopArrival[] with:
+        - RouteID
+        - RouteStopID
+        - Times[] (array of arrival time objects)
+        """
         arrival_times = []
         if not eta_data or not route_stop_id:
             return arrival_times
 
         for eta_item in eta_data:
+            # Extract RouteStopID from the response - try multiple field names
             stop_id = self._extract_route_stop_id(eta_item)
-            if stop_id == route_stop_id and "ArrivalTimes" in eta_item:
-                arrival_times_array = eta_item["ArrivalTimes"]
-                if isinstance(arrival_times_array, list):
-                    for arrival_time in arrival_times_array:
-                        vehicle_id = arrival_time.get("VehicleID")
-                        if vehicle_id is not None:
-                            vehicle_id = str(vehicle_id) if not isinstance(vehicle_id, str) else vehicle_id
-                        
-                        arrival_time_obj = ArrivalTime(
-                            minutes=arrival_time.get("Minutes"),
-                            vehicle_id=vehicle_id,
-                            vehicle_name=arrival_time.get("VehicleName")
-                        )
-                        arrival_times.append(arrival_time_obj)
+            
+            # If we can't find RouteStopID, try to match by checking if this item has Times
+            # and if we're only looking for one stop, accept it
+            if not stop_id and len(eta_data) == 1:
+                # If there's only one item and it has Times, assume it's for our stop
+                pass
+            elif stop_id != route_stop_id:
+                continue
+            
+            # Check for Times array (primary field name from API docs)
+            times_array = eta_item.get("Times") or eta_item.get("ArrivalTimes")
+            
+            if times_array and isinstance(times_array, list):
+                for time_obj in times_array:
+                    # Extract vehicle ID - try multiple field names
+                    vehicle_id = (
+                        time_obj.get("VehicleId") or 
+                        time_obj.get("VehicleID") or
+                        time_obj.get("Vehicle")
+                    )
+                    if vehicle_id is not None:
+                        vehicle_id = str(vehicle_id) if not isinstance(vehicle_id, str) else vehicle_id
+                    
+                    # Extract seconds (primary timing field)
+                    seconds = time_obj.get("Seconds")
+                    
+                    # Convert seconds to minutes if available
+                    minutes = None
+                    if seconds is not None:
+                        minutes = max(0, int(seconds / 60))  # Round down to nearest minute
+                    elif time_obj.get("Minutes") is not None:
+                        # Fallback to Minutes field if Seconds not available
+                        minutes = time_obj.get("Minutes")
+                    
+                    # Extract other fields
+                    time_str = time_obj.get("Time")  # Time of day string
+                    estimate_time = time_obj.get("EstimateTime")
+                    scheduled_time = (
+                        time_obj.get("ScheduledTime") or 
+                        time_obj.get("ScheduledArrivalTime")
+                    )
+                    is_arriving = time_obj.get("IsArriving", False)
+                    on_time_status = time_obj.get("OnTimeStatus")
+                    
+                    arrival_time_obj = ArrivalTime(
+                        minutes=minutes,
+                        seconds=seconds,
+                        time=time_str,
+                        estimate_time=estimate_time,
+                        scheduled_time=scheduled_time,
+                        is_arriving=is_arriving,
+                        on_time_status=on_time_status,
+                        vehicle_id=vehicle_id,
+                        vehicle_name=time_obj.get("VehicleName")
+                    )
+                    arrival_times.append(arrival_time_obj)
+        
+        # Sort by seconds (ascending) so earliest arrival is first
+        arrival_times.sort(key=lambda x: x.seconds if x.seconds is not None else float('inf'))
 
         return arrival_times
 
