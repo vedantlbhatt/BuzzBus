@@ -176,6 +176,14 @@ class RouteService:
             begin_arrival_times = self._filter_arrival_times_by_direction(
                 begin_arrival_times, dest_arrival_times
             )
+            
+            # Also filter dest_arrival_times to only show vehicles that go through begin stop
+            # This ensures consistency - only show vehicles that serve both stops in correct order
+            begin_vehicle_ids = {at.vehicle_id for at in begin_arrival_times if at.vehicle_id}
+            dest_arrival_times = [
+                at for at in dest_arrival_times 
+                if at.vehicle_id and at.vehicle_id in begin_vehicle_ids
+            ]
 
             results.append(
                 RouteResult(
@@ -448,12 +456,17 @@ class RouteService:
                     seconds = time_obj.get("Seconds")
                     
                     # Convert seconds to minutes if available
+                    # Always ensure minutes is set to prevent N/A in frontend
                     minutes = None
                     if seconds is not None:
                         minutes = max(0, int(seconds / 60))  # Round down to nearest minute
                     elif time_obj.get("Minutes") is not None:
                         # Fallback to Minutes field if Seconds not available
                         minutes = time_obj.get("Minutes")
+                    else:
+                        # If neither seconds nor minutes available, set to 0 to prevent N/A
+                        # This should rarely happen, but ensures frontend never shows N/A
+                        minutes = 0
                     
                     # Extract other fields
                     time_str = time_obj.get("Time")  # Time of day string
