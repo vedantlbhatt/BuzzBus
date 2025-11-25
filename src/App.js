@@ -5,7 +5,11 @@ import Map from './components/Map';
 import './App.css';
 
 const resolvePlaceCoordinates = async (place) => {
-  if (!place || !place.name || place.coordinates) {
+  if (!place || !place.name) {
+    return place;
+  }
+
+  if (place.coordinates && place.fromAutocomplete) {
     return place;
   }
 
@@ -74,14 +78,15 @@ const resolvePlaceCoordinates = async (place) => {
     address: details.formatted_address,
     coordinates: `${details.geometry.location.lat()},${details.geometry.location.lng()}`,
     placeId: topPrediction.place_id,
-    types: details.types
+    types: details.types,
+    fromAutocomplete: true
   };
 };
 
 function App() {
   const [currentView, setCurrentView] = useState('search'); // 'search' or 'map'
-  const [beginPlace, setBeginPlace] = useState({ name: '', coordinates: '' });
-  const [destPlace, setDestPlace] = useState({ name: '', coordinates: '' });
+  const [beginPlace, setBeginPlace] = useState({ name: '', coordinates: '', fromAutocomplete: false });
+  const [destPlace, setDestPlace] = useState({ name: '', coordinates: '', fromAutocomplete: false });
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -146,19 +151,19 @@ function App() {
   };
 
   const handleBeginPlaceSelect = (placeData) => {
-    setBeginPlace(placeData);
+    setBeginPlace({ ...placeData, fromAutocomplete: true });
   };
 
   const handleDestPlaceSelect = (placeData) => {
-    setDestPlace(placeData);
+    setDestPlace({ ...placeData, fromAutocomplete: true });
   };
 
   const handleBeginPlaceChange = (e) => {
-    setBeginPlace({ name: e.target.value, coordinates: '' });
+    setBeginPlace({ name: e.target.value, coordinates: '', fromAutocomplete: false });
   };
 
   const handleDestPlaceChange = (e) => {
-    setDestPlace({ name: e.target.value, coordinates: '' });
+    setDestPlace({ name: e.target.value, coordinates: '', fromAutocomplete: false });
   };
 
   return (

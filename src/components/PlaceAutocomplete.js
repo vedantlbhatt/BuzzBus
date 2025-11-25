@@ -34,10 +34,6 @@ const PlaceAutocomplete = ({
 
     // Create autocomplete
     autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
-      bounds: new window.google.maps.LatLngBounds(
-        new window.google.maps.LatLng(33.7656, -84.4063), // Southwest
-        new window.google.maps.LatLng(33.7856, -84.3863)  // Northeast
-      ),
       componentRestrictions: { country: 'us' },
       fields: ['place_id', 'geometry', 'name', 'formatted_address', 'types']
     });
