@@ -185,22 +185,36 @@ const Map = () => {
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
 
+    // Create a map of routeId to color
+    const routeColorMap = {};
+    routes.forEach(route => {
+      if (route.routeId) {
+        routeColorMap[route.routeId] = route.mapLineColor || '#6366f1';
+      }
+    });
+
     vehicles.forEach(vehicle => {
       if (!vehicle.isOnRoute) return;
 
-      const iconUrl = vehicle.isDelayed 
-        ? 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" fill="#ff0000" stroke="#ffffff" stroke-width="2"/>
-            <text x="12" y="16" text-anchor="middle" fill="white" font-size="12" font-weight="bold">🚌</text>
-          </svg>
-        `)
-        : 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" fill="#4CAF50" stroke="#ffffff" stroke-width="2"/>
-            <text x="12" y="16" text-anchor="middle" fill="white" font-size="12" font-weight="bold">🚌</text>
-          </svg>
-        `);
+      // Get route color, default to gray if not found
+      const routeColor = routeColorMap[vehicle.routeId] || '#808080';
+      
+      // Get heading in degrees (0-360), default to 0 if not available
+      const heading = vehicle.heading || 0;
+      
+      // Convert heading to rotation (Google Maps uses degrees clockwise from north)
+      // SVG rotation is clockwise, so we can use heading directly
+      const rotation = heading;
+      
+      // Create triangle pointing in direction of travel
+      // Triangle points upward (north) by default, then rotated by heading
+      const iconUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+        <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+          <g transform="translate(10,10) rotate(${rotation}) translate(-10,-10)">
+            <path d="M 10 2 L 18 18 L 2 18 Z" fill="${routeColor}" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
+          </g>
+        </svg>
+      `);
 
       const marker = new window.google.maps.Marker({
         position: { lat: vehicle.latitude, lng: vehicle.longitude },
@@ -208,8 +222,9 @@ const Map = () => {
         title: `${vehicle.name} - Route ${vehicle.routeId}${vehicle.isDelayed ? ' (Delayed)' : ''}`,
         icon: {
           url: iconUrl,
-          scaledSize: new window.google.maps.Size(24, 24),
-          anchor: new window.google.maps.Point(12, 12)
+          scaledSize: new window.google.maps.Size(20, 20),
+          anchor: new window.google.maps.Point(10, 10),
+          rotation: 0  // Rotation handled in SVG
         }
       });
 

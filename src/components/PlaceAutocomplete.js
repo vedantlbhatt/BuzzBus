@@ -10,7 +10,11 @@ const PlaceAutocomplete = ({
 }) => {
   const inputRef = useRef(null);
   const autocompleteRef = useRef(null);
+  const onPlaceSelectRef = useRef(onPlaceSelect);
   const [isLoaded, setIsLoaded] = useState(false);
+  
+  // Update ref on every render (refs don't cause re-renders)
+  onPlaceSelectRef.current = onPlaceSelect;
 
   useEffect(() => {
     // Check if Google Maps API is loaded
@@ -30,10 +34,16 @@ const PlaceAutocomplete = ({
   }, []);
 
   useEffect(() => {
-    if (!isLoaded || !inputRef.current) return;
+    if (!isLoaded || !inputRef.current || autocompleteRef.current) return;
 
-    // Create autocomplete
+    // Create autocomplete with Atlanta bounds
+    const atlantaBounds = new window.google.maps.LatLngBounds(
+      new window.google.maps.LatLng(33.6, -84.5),  // Southwest
+      new window.google.maps.LatLng(33.9, -84.3)    // Northeast
+    );
+    
     autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
+      bounds: atlantaBounds,
       componentRestrictions: { country: 'us' },
       fields: ['place_id', 'geometry', 'name', 'formatted_address', 'types']
     });
@@ -43,14 +53,17 @@ const PlaceAutocomplete = ({
       const place = autocompleteRef.current.getPlace();
       if (place.geometry) {
         const coords = place.geometry.location;
+        // Use the exact name from the dropdown - don't let it change
+        const selectedName = place.name || place.formatted_address;
         const placeData = {
-          name: place.name || place.formatted_address,
+          name: selectedName,
           address: place.formatted_address,
           coordinates: `${coords.lat()},${coords.lng()}`,
           placeId: place.place_id,
-          types: place.types
+          types: place.types,
+          fromAutocomplete: true  // Mark as selected from dropdown
         };
-        onPlaceSelect(placeData);
+        onPlaceSelectRef.current(placeData);
       }
     };
 
@@ -59,9 +72,10 @@ const PlaceAutocomplete = ({
     return () => {
       if (autocompleteRef.current) {
         window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        autocompleteRef.current = null;
       }
     };
-  }, [isLoaded, onPlaceSelect]);
+  }, [isLoaded]);
 
   return (
     <input

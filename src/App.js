@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import PlaceAutocomplete from './components/PlaceAutocomplete';
 import Map from './components/Map';
@@ -9,7 +9,8 @@ const resolvePlaceCoordinates = async (place) => {
     return place;
   }
 
-  if (place.coordinates && place.fromAutocomplete) {
+  // If this place was selected from dropdown, use it as-is
+  if (place.fromAutocomplete === true && place.coordinates) {
     return place;
   }
 
@@ -18,11 +19,18 @@ const resolvePlaceCoordinates = async (place) => {
   }
 
   const autocompleteService = new window.google.maps.places.AutocompleteService();
+  
+  // Atlanta bounds
+  const atlantaBounds = new window.google.maps.LatLngBounds(
+    new window.google.maps.LatLng(33.6, -84.5),  // Southwest
+    new window.google.maps.LatLng(33.9, -84.3)    // Northeast
+  );
 
   const predictions = await new Promise((resolve) => {
     autocompleteService.getPlacePredictions(
       {
         input: place.name,
+        bounds: atlantaBounds,
         componentRestrictions: { country: 'us' }
       },
       (suggestions, status) => {
@@ -104,8 +112,14 @@ function App() {
     setRoutes([]);
 
     try {
-      const resolvedBegin = await resolvePlaceCoordinates(beginPlace);
-      const resolvedDest = await resolvePlaceCoordinates(destPlace);
+      // Only resolve if not already selected from dropdown
+      const resolvedBegin = beginPlace.fromAutocomplete === true && beginPlace.coordinates
+        ? beginPlace
+        : await resolvePlaceCoordinates(beginPlace);
+      
+      const resolvedDest = destPlace.fromAutocomplete === true && destPlace.coordinates
+        ? destPlace
+        : await resolvePlaceCoordinates(destPlace);
 
       if (!resolvedBegin?.coordinates || !resolvedDest?.coordinates) {
         setError('Please pick locations from the suggestions so we can use exact coordinates.');
@@ -150,21 +164,21 @@ function App() {
     }
   };
 
-  const handleBeginPlaceSelect = (placeData) => {
+  const handleBeginPlaceSelect = useCallback((placeData) => {
     setBeginPlace({ ...placeData, fromAutocomplete: true });
-  };
+  }, []);
 
-  const handleDestPlaceSelect = (placeData) => {
+  const handleDestPlaceSelect = useCallback((placeData) => {
     setDestPlace({ ...placeData, fromAutocomplete: true });
-  };
+  }, []);
 
-  const handleBeginPlaceChange = (e) => {
+  const handleBeginPlaceChange = useCallback((e) => {
     setBeginPlace({ name: e.target.value, coordinates: '', fromAutocomplete: false });
-  };
+  }, []);
 
-  const handleDestPlaceChange = (e) => {
+  const handleDestPlaceChange = useCallback((e) => {
     setDestPlace({ name: e.target.value, coordinates: '', fromAutocomplete: false });
-  };
+  }, []);
 
   return (
     <div className="App">
