@@ -4,6 +4,80 @@ import PlaceAutocomplete from './components/PlaceAutocomplete';
 import Map from './components/Map';
 import './App.css';
 
+const resolvePlaceCoordinates = async (place) => {
+  if (!place || !place.name || place.coordinates) {
+    return place;
+  }
+
+  if (!(window.google && window.google.maps && window.google.maps.places)) {
+    return place;
+  }
+
+  const autocompleteService = new window.google.maps.places.AutocompleteService();
+
+  const predictions = await new Promise((resolve) => {
+    autocompleteService.getPlacePredictions(
+      {
+        input: place.name,
+        componentRestrictions: { country: 'us' }
+      },
+      (suggestions, status) => {
+        if (
+          status === window.google.maps.places.PlacesServiceStatus.OK &&
+          suggestions &&
+          suggestions.length > 0
+        ) {
+          resolve(suggestions);
+        } else {
+          resolve([]);
+        }
+      }
+    );
+  });
+
+  if (!predictions.length) {
+    return place;
+  }
+
+  const topPrediction = predictions[0];
+  const placesService = new window.google.maps.places.PlacesService(
+    document.createElement('div')
+  );
+
+  const details = await new Promise((resolve) => {
+    placesService.getDetails(
+      {
+        placeId: topPrediction.place_id,
+        fields: ['geometry', 'name', 'formatted_address', 'types']
+      },
+      (result, status) => {
+        if (
+          status === window.google.maps.places.PlacesServiceStatus.OK &&
+          result &&
+          result.geometry &&
+          result.geometry.location
+        ) {
+          resolve(result);
+        } else {
+          resolve(null);
+        }
+      }
+    );
+  });
+
+  if (!details) {
+    return place;
+  }
+
+  return {
+    name: details.name || place.name,
+    address: details.formatted_address,
+    coordinates: `${details.geometry.location.lat()},${details.geometry.location.lng()}`,
+    placeId: topPrediction.place_id,
+    types: details.types
+  };
+};
+
 function App() {
   const [currentView, setCurrentView] = useState('search'); // 'search' or 'map'
   const [beginPlace, setBeginPlace] = useState({ name: '', coordinates: '' });
@@ -25,11 +99,24 @@ function App() {
     setRoutes([]);
 
     try {
+      const resolvedBegin = await resolvePlaceCoordinates(beginPlace);
+      const resolvedDest = await resolvePlaceCoordinates(destPlace);
+
+      if (!resolvedBegin?.coordinates || !resolvedDest?.coordinates) {
+        setError('Please pick locations from the suggestions so we can use exact coordinates.');
+        setLoading(false);
+        return;
+      }
+
+      // Keep displayed text in sync with the resolved place names
+      setBeginPlace(resolvedBegin);
+      setDestPlace(resolvedDest);
+
       const requestData = {
-        begin_location: beginPlace.name,
-        dest_location: destPlace.name,
-        begin_coordinates: beginPlace.coordinates,
-        dest_coordinates: destPlace.coordinates
+        begin_location: resolvedBegin.name,
+        dest_location: resolvedDest.name,
+        begin_coordinates: resolvedBegin.coordinates,
+        dest_coordinates: resolvedDest.coordinates
       };
 
       // Determine API URL based on environment
