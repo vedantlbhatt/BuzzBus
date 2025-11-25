@@ -171,23 +171,8 @@ class RouteService:
             # Parse arrival times for dest stop
             dest_arrival_times = self._parse_arrival_times(dest_eta_data, dest_stop[4])
             
-            # Filter arrival times to only show vehicles going in the correct direction
-            # Use arrival time comparison: vehicle must arrive at dest AFTER begin stop
-            begin_arrival_times = self._filter_arrival_times_by_direction(
-                begin_arrival_times, dest_arrival_times
-            )
-            
-            # Also filter dest_arrival_times to only show vehicles that go through begin stop
-            # This ensures consistency - only show vehicles that serve both stops in correct order
-            begin_vehicle_ids = {at.vehicle_id for at in begin_arrival_times if at.vehicle_id}
-            dest_arrival_times = [
-                at for at in dest_arrival_times 
-                if at.vehicle_id and at.vehicle_id in begin_vehicle_ids
-            ]
-
+            # NOTE: Direction filtering removed - return all vehicles and arrival times
             # The arrival_times are already sorted by seconds (earliest first) in _parse_arrival_times
-            # So begin_arrival_times[0] is the specific vehicle that will take you from begin to dest
-            # This vehicle's vehicle_id and vehicle_name are in the ArrivalTime object
 
             results.append(
                 RouteResult(
@@ -209,18 +194,8 @@ class RouteService:
                 )
             )
 
-        # Sort results by total_walking_distance to ensure correct order
-        # Routes with vehicles going in correct direction are prioritized
-        # Routes are sorted by: (has_valid_vehicles, total_walking_distance)
-        # This ensures routes with valid vehicles come first, then sorted by distance
-        def sort_key(route):
-            has_vehicles = len(route.begin_stop.arrival_times) > 0
-            # Routes with vehicles get priority (lower sort value)
-            # Routes without vehicles get penalty (higher sort value)
-            priority = 0 if has_vehicles else 1000000
-            return (priority, route.total_walking_distance)
-        
-        results.sort(key=sort_key)
+        # Sort results by total_walking_distance only
+        results.sort(key=lambda r: r.total_walking_distance)
 
         return RouteSearchResponse(
             routes=results,

@@ -4,3 +4,4 @@ node_modules/
 local.env
 appsettings.Development.json
 appsettings.Production.json
+vehicle_positions.csv
