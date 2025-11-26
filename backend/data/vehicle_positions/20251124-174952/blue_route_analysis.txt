@@ -1,9 +1,0 @@
-Blue Route Bus Movement Analysis
-================================================================================
-
-Key Findings:
-- All 4 buses start at same location
-- Buses quickly diverge in different directions
-- Vehicle 5 has extended coverage (goes further west)
-- Buses frequently travel in opposite directions
-- Pattern suggests loop route with bidirectional service

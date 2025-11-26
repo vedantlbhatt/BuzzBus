@@ -143,7 +143,7 @@ function App() {
         const hostname = window.location.hostname;
         // Local development - use proxy
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
-          return '/api/RouteSearch';
+          return '/api/RouteSearch';  
         }
         // Production - use Railway backend
         return 'https://buzzbus-production.up.railway.app/api/RouteSearch';
