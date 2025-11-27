@@ -143,10 +143,10 @@ function App() {
         const hostname = window.location.hostname;
         // Local development - use proxy
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
-          return '/api/RouteSearch';  
+          return '/api/RouteSearch/';  
         }
         // Production - use Railway backend
-        return 'https://buzzbus-production.up.railway.app/api/RouteSearch';
+        return 'https://buzzbus-production.up.railway.app/api/RouteSearch/';
       })();
       
       const response = await axios.post(apiUrl, requestData);
@@ -317,19 +317,19 @@ function App() {
                 return (
                   <div 
                     key={route.routeId} 
-                    className={`route-card ${isFirstCard ? 'route-card-dark' : 'route-card-light'}`}
+                    className={`route-card ${ 'route-card-light'}`}
                   >
                     <div className="route-card-content">
                       <div className="route-card-left">
-                        <div className={`route-name ${isFirstCard ? 'route-name-dark' : 'route-name-light'}`}>
+                        <div className={`route-name ${ 'route-name-light'}`}>
                           {route.routeName || `Route ${route.routeId}`}
                         </div>
-                        <div className={`route-time ${isFirstCard ? 'route-time-dark' : 'route-time-light'}`}>
+                        <div className={`route-time ${ 'route-time-light'}`}>
                           {nextArrivalText}
                           <span className="route-time-unit">min</span>
                         </div>
                         {statusText && (
-                          <div className={`route-status ${isFirstCard ? 'route-status-dark' : 'route-status-light'}`}>
+                          <div className={`route-status ${'route-status-light'}`}>
                             {statusText}
                           </div>
                         )}
@@ -368,4 +368,3 @@ function App() {
 }
 
 export default App;
-
